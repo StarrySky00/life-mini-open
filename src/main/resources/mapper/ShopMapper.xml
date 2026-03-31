@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.starrysky.lifemini.mapper.ShopMapper">
+    <insert id="saveShopKeyword">
+        insert into tb_shop_keyword_relation (keyword_id,shop_id,comment_id)
+        values
+        <foreach item="keywordId" collection="keywords" separator=",">
+            (#{keywordId},#{shopId},#{commentId})
+        </foreach>
+    </insert>
+
+    <select id="queryShopByStatus" resultType="com.starrysky.lifemini.model.vo.ShopVO"
+            parameterType="java.lang.Integer">
+        select s.id,
+        s.shop_name,
+        sc.id as categoryId,
+        sc.category_name,
+        s.address,
+        s.longitude,
+        s.latitude,
+        s.score,
+        s.phone,
+        s.image_url,
+        s.status,
+        s.create_time,
+        s.update_time
+        from tb_shop s
+        left join tb_shop_category sc on s.category_id = sc.id
+        <where>
+            <if test="status != null">
+                and s.status = #{status}
+            </if>
+            <if test="categoryId != null">
+                and s.category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="queryShopByCategory" resultType="com.starrysky.lifemini.model.vo.ShopVO">
+        select
+        s.id,
+        s.shop_name,
+        s.category_id,
+        sc.category_name,
+        s.address,
+        s.longitude,
+        s.latitude,
+        s.score,
+        s.phone,
+        s.image_url,
+        s.status,
+        s.create_time,
+        s.update_time
+        from tb_shop s
+        left join tb_shop_category sc on s.category_id = sc.id
+        <where>
+            s.status = 1
+            <if test="categoryId != null">
+                and s.category_id = #{categoryId}
+            </if>
+            <if test="shopName!=null">
+                and s.shop_name like concat('%',#{shopName},'%')
+            </if>
+        </where>
+        order by s.score desc
+        limit #{pageStart},#{pageSize}
+    </select>
+
+    <!--过滤geo里获取到的候选商店id，并获取匹配度-->
+    <select id="filterShopsByGeoAndKeywords" resultType="com.starrysky.lifemini.model.dto.ShopMatchDTO">
+        select s.id as id,
+        <choose>
+            <when test="keywordIds!=null and keywordIds.size() > 0 ">
+                count(skr.keyword_id) as match_keywords,
+            </when>
+            <otherwise>
+                0 as match_keywords,
+            </otherwise>
+        </choose>
+        s.score as score
+        from tb_shop s
+        <if test="keywordIds!=null and keywordIds.size() &gt; 0 ">
+            left join tb_shop_keyword_relation skr on s.id = skr.shop_id
+        </if>
+        where
+        s.category_id = #{categoryId}
+        and s.status = #{status}
+        and s.id in
+        <foreach collection="candidateIds" item="shopId" open="(" separator="," close=")">
+            #{shopId}
+        </foreach>
+        <if test="keywordIds!=null and keywordIds.size() &gt; 0 ">
+            and keyword_id in
+            <foreach collection="keywordIds" item="kid" open="(" separator="," close=")">
+                #{kid}
+            </foreach>
+            group by s.id
+        </if>
+    </select>
+    <!--获取商店匹配信息，根据分类和关键词-->
+    <select id="searchByCategoryAndKeywords" resultType="com.starrysky.lifemini.model.dto.ShopMatchDTO">
+        select
+        s.id as id,
+        count(skr.keyword_id) as match_keywords,
+        s.score as score
+        from tb_shop s left join tb_shop_keyword_relation skr on s.id = skr.shop_id
+        where
+        s.category_id = #{categoryId}
+        and s.status = #{status}
+        and keyword_id in
+        <foreach collection="keywordIds" item="kid" open="(" separator="," close=")">
+            #{kid}
+        </foreach>
+        group by s.id
+    </select>
+    <!--仅根据分类获取商店id信息-->
+    <select id="searchByCategoryOnly" resultType="java.lang.Long">
+        select s.id as id
+        from tb_shop s
+        where s.category_id = #{categoryId}
+          and s.status = #{status}
+        order by score desc
+        limit #{limit}
+    </select>
+    <!--批量查商店信息和分类名称-->
+    <select id="queryShopAndCategoryNameByIds" resultType="com.starrysky.lifemini.model.vo.ShopVO">
+        select s.id,
+        s.shop_name,
+        sc.id as category_id,
+        sc.category_name,
+        s.address,
+        s.longitude,
+        s.latitude,
+        s.score,
+        s.phone,
+        s.image_url,
+        s.status,
+        s.create_time,
+        s.update_time
+        from tb_shop s
+        left join tb_shop_category sc on s.category_id = sc.id
+        where s.id in
+        <foreach collection="missIds" item="shopId" open="(" separator="," close=")">
+            #{shopId}
+        </foreach>
+    </select>
+</mapper>

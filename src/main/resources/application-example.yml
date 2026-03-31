@@ -1,0 +1,107 @@
+spring:
+  application:
+    name:life-mini
+
+  # 开发环境
+  profiles:
+    active: dev
+
+  # 文件大小限制
+  servlet:
+    multipart:
+      max-request-size: 10MB
+      max-file-size: 10MB
+
+  # ai配置
+  ai:
+    dashscope:
+      api-key: # 修改：你的 apikey
+      chat:
+        options:
+          temperature: 0.7
+          model: # 修改： 模型名称
+
+  # redis 配置
+  data:
+    redis:
+      host: # 修改：redishost
+      password: #修改： password
+      port: 6379
+      database: 1
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 1
+          time-between-eviction-runs: 10s
+  # 数据库配置
+  datasource:
+    url: # 修改： 数据库连接ur l
+    username:  #修改：  密码
+    password: # 修改： password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      # 连接池参数（开发环境可宽松）
+      initial-size: 2
+      min-idle: 2
+      max-active: 10
+      max-wait: 60000
+      connection-init-sqls:
+        - SET time_zone = 'Asia/Shanghai'; # 手动设置时区
+
+
+  # 配置邮件服务
+  mail:
+    host: smtp.qq.com       # QQ邮箱的 SMTP 服务器地址
+    port: 465               # 明确指定 SSL 端口
+    username: # 修改：你的QQ邮箱账号
+    password: # 修改：你的邮箱授权码 (不是登录密码)
+    protocol: smtp
+    default-encoding: UTF-8 # 防止中文乱码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true    # 开启 SSL 安全连接
+          starttls:
+            enable: true
+            required: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false # 必须使用 SSL
+          # 邮件服务超时时间配置 (防阻塞)
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
+# 自定义配置：管理端接收验证码的邮箱
+admin:
+  receive-email: #修改：  自定义的接收验证码的邮箱，可以去掉配置该有邮箱登录注册直接发给注册人。这里测试是直接发给指定邮箱
+
+# mybatisplus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 输出日志
+
+# 日志级别（开发环境可开 debug）
+logging:
+  level:
+    com.starrysky.lifemini: debug
+    org.springframework: warn
+    org.springframework.ai:  debug
+# minio配置
+# minio配置
+minio:
+  endpoint: http://xxx.xxx.xxx.xxx:9000 # 修改： 你的 MinIO 端点
+  accessKey:  # 修改： 你的 MinIO Access Key
+  secretKey:  # 修改： 你的 MinIO Secret Key
+  bucket: life-mini # 确认 Bucket 名称与你创建的一致
+  custom-domain: http://xxx.xxx.xxx:9000 # 修改：定义的返回图片url的前缀,默认的是使用endpoint
+
+
+wechat:
+  appid: # 修改： 微信appid
+  secret: # 修改： 密钥

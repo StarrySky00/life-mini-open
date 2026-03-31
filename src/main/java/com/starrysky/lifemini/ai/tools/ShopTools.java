@@ -1,0 +1,282 @@
+package com.starrysky.lifemini.ai.tools;
+
+
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.starrysky.lifemini.common.constant.CacheConstant;
+import com.starrysky.lifemini.common.enums.StatusEnum;
+import com.starrysky.lifemini.common.util.ThreadLocalUtil;
+import com.starrysky.lifemini.mapper.CommentMapper;
+import com.starrysky.lifemini.mapper.ShopMapper;
+import com.starrysky.lifemini.model.dto.AiCommentDTO;
+import com.starrysky.lifemini.model.dto.CommentDTO;
+import com.starrysky.lifemini.model.dto.ShopMatchDTO;
+import com.starrysky.lifemini.model.entity.Comment;
+import com.starrysky.lifemini.model.query.ShopQuery;
+import com.starrysky.lifemini.model.vo.ShopSearchVO;
+import com.starrysky.lifemini.model.vo.ShopVO;
+import com.starrysky.lifemini.model.result.Result;
+import com.starrysky.lifemini.service.ICommentService;
+import com.starrysky.lifemini.service.IShopService;
+import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Description;
+import org.springframework.data.geo.*;
+import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.domain.geo.GeoReference;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class ShopTools {
+    private final ShopMapper shopMapper;
+    private final CommentMapper commentMapper;
+    private final ICommentService commentService;
+    private final IShopService shopService;
+    private final StringRedisTemplate stringRedisTemplate;
+
+
+
+    @Bean
+    @Description("##1. 根据商店分类ID,商店评价关键词ID列表,用户坐标,距离范围等条件查询符合要求的商店信息")
+    public Function<ShopQuery, String> searchShopsTool() {
+        return this::searchShops;
+    }
+
+    // 包装一下 Long 参数，防止大模型传参失败
+    public record ShopIdRequest(Long shopId) {}
+
+    @Bean
+    @Description("根据商店id查询商店最近发布的十条评价内容")
+    public Function<ShopIdRequest, String> searchShopDetailsTool() {
+        return request -> this.SearchShopDetails(request.shopId());
+    }
+
+    @Bean
+    @Description("根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
+    public BiFunction<AiCommentDTO, ToolContext, String> writeCommentTool() {
+        return (dto, toolContext) -> {
+            Long userId = (Long) toolContext.getContext().get("userId");
+            return this.writeComment(dto, userId);
+        };
+    }
+
+
+
+
+
+    //根据描述搜索商店
+    public String searchShops(ShopQuery shopQuery) {
+
+        if (shopQuery.getCategoryId() == null) {
+            return "请用户先描述需要哪种分类的商店";
+        }
+        shopQuery.setLimit(shopQuery.getLimit() == null ? 5 : shopQuery.getLimit());
+
+        //1. 根据关键词集合kids获取符合的商店id与匹配数集合
+        log.info("【触发函数查询 shopQuery：{}】", shopQuery);
+
+        //2. 判断查询的类型
+        boolean hasLocation = shopQuery.getLongitude() != null
+                && shopQuery.getLatitude() != null
+                && shopQuery.getDistance() != null;
+        if (hasLocation) {
+            shopQuery.setDistance(Math.min(shopQuery.getDistance(), 5000.0));
+            //3 有距离有关键词or有距离无关键词
+            return processWithDistance(shopQuery);
+        } else {
+            //4 无距离有关键词or无距离无关键词（纯分类）
+            return processWithoutDistance(shopQuery);
+        }
+    }
+
+    //查询商店信息（包含距离）
+    private String processWithDistance(ShopQuery shopQuery) {
+        log.info("【with-distance】根据商店分类，关键词列表，用户坐标查询商店信息");
+
+        //1. 从redis查询符合距离限制的候选商店id
+        String geoKey = CacheConstant.GEO_KEY_PRX + shopQuery.getCategoryId();
+        GeoResults<RedisGeoCommands.GeoLocation<String>> results = stringRedisTemplate.opsForGeo().search(
+                geoKey,
+                GeoReference.fromCoordinate(shopQuery.getLongitude(), shopQuery.getLatitude()),
+                new Distance(shopQuery.getDistance(), Metrics.KILOMETERS),
+                RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().sortAscending().limit(shopQuery.getLimit() * 10)
+        );
+
+        //2. 提取出商店候选id（有序的）和 距离map
+        List<Long> candidateIds = new ArrayList<>();
+        Map<Long, Double> distanceMap = new HashMap<>();
+        if (results == null || CollUtil.isEmpty(results.getContent())) {
+            return "范围内暂无符合条件的商店";
+        } else {
+            List<GeoResult<RedisGeoCommands.GeoLocation<String>>> contents = results.getContent();
+            for (GeoResult<RedisGeoCommands.GeoLocation<String>> content : contents) {
+                Long shopId = TypeConversionUtil.toLong(content.getContent().getName());
+                candidateIds.add(shopId);
+                double distance = content.getDistance().getValue();
+                distanceMap.put(shopId, distance);
+            }
+        }
+
+        //2. 有无关键词，查找符合所有条件的商店id和匹配度
+        List<ShopMatchDTO> shopMatches = shopMapper.filterShopsByGeoAndKeywords(
+                shopQuery.getCategoryId(),
+                shopQuery.getKeywordIds(),
+                candidateIds,
+                StatusEnum.ENABLE.getId());
+        if (CollUtil.isEmpty(shopMatches)) {
+            return "[]";
+        }
+
+        //3. 选取最终的商店id
+        List<Long> finalShopIds = shopMatches.stream()
+                .filter(s -> distanceMap.containsKey(s.getId()))
+                .sorted(Comparator.comparing(s -> {
+                    double distance = distanceMap.get(s.getId());
+                    Integer match = s.getMatchKeywords();
+                    double score = s.getScore();
+                    return calculateSortScore(distance, match, score, shopQuery);
+                }, Comparator.reverseOrder()))
+                .map(ShopMatchDTO::getId)
+                .limit(shopQuery.getLimit())
+                .toList();
+
+        //4. 根据商店ids获取商店信息(缓存+DB)
+        Map<Long, ShopVO> shopVOMap = shopService.getShopVoBatchMap(finalShopIds);
+
+        //5. 封装商店信息（按照距离升序排序）
+        List<ShopSearchVO> shops = new ArrayList<>(shopQuery.getLimit());
+        for (Long shopId : finalShopIds) {
+            ShopVO shopVO = shopVOMap.get(shopId);
+            ShopSearchVO vo = BeanUtil.copyProperties(shopVO, ShopSearchVO.class);
+            vo.setDistance(distanceMap.get(shopId));
+            shops.add(vo);
+        }
+
+        //6. 返回
+        String jsonStr = JSONUtil.toJsonStr(shops);
+        log.info("【searchShops(with-distance)  tools查询到的结果：{}】", jsonStr);
+        return jsonStr;
+    }
+
+    private double calculateSortScore(double distance, Integer match, double score, ShopQuery shopQuery) {
+        double WEIGHT_MATCH = 0.6;  // 60% 权重给匹配度
+        double WEIGHT_DIST = 0.3;   // 30% 权重给距离
+        double WEIGHT_SCORE = 0.1;  // 10% 权重给店铺评分
+
+        //1. 计算匹配度分数
+        double matchScore = 0.0;
+        if (shopQuery.getKeywordIds() != null && match != null) {
+            int userKeywordsCount = shopQuery.getKeywordIds().size();
+            matchScore = ((double) Math.min(userKeywordsCount, match) / userKeywordsCount) * 100;//限制最多5个关键词
+        }
+
+
+        //2. 计算距离分
+        double distanceScore = 0.0;
+        double maxDistance = shopQuery.getDistance();
+        if (maxDistance < 5000.0) {
+            distanceScore = ((maxDistance - distance) / maxDistance) * 100;
+        }
+
+        //3.计算基础评分
+        double baseScore = score * 20;
+        //4. 计算总分数
+        return (matchScore * WEIGHT_MATCH) + (distanceScore * WEIGHT_DIST) + (baseScore * WEIGHT_SCORE);
+    }
+
+    //查询商店信息（排除距离）
+    private String processWithoutDistance(ShopQuery shopQuery) {
+        log.info("【without-distance】根据商店分类，关键词列表查询商店信息");
+
+        //1. 根据（分类or分类+关键词）查商店ids
+        List<Long> keywordIds = shopQuery.getKeywordIds();
+        List<Long> shopIds;
+        if (CollUtil.isNotEmpty(keywordIds)) {
+
+            //2 分类+关键词
+            List<ShopMatchDTO> shopMatchDTOS = shopMapper.searchByCategoryAndKeywords(shopQuery.getCategoryId(),
+                    shopQuery.getKeywordIds(),
+                    StatusEnum.ENABLE.getId());
+            shopIds = shopMatchDTOS.stream()
+                    .sorted(Comparator.comparing(s -> {
+                        return s.getScore() * 0.3 + (s.getMatchKeywords() / 5) * 0.7;
+                    }, Comparator.reverseOrder()))
+                    .map(ShopMatchDTO::getId)
+                    .limit(shopQuery.getLimit())
+                    .toList();
+
+        } else {
+            //3 纯分类
+            shopIds = shopMapper.searchByCategoryOnly(shopQuery.getCategoryId(),
+                    StatusEnum.ENABLE.getId(),
+                    shopQuery.getLimit());
+        }
+
+        //4. 根据商店id查询(缓存+DB补偿)
+        Map<Long, ShopVO> shopVOMap = shopService.getShopVoBatchMap(shopIds);
+
+        //5. 再次排序
+        List<ShopSearchVO> shops = new ArrayList<>(shopIds.size());
+        for (Long shopId : shopIds) {
+            ShopVO shopVO = shopVOMap.get(shopId);
+            if (shopVO == null) {
+                log.warn("！！！未查询到此商店，请检查商店是否存在");
+                continue;
+            }
+            ShopSearchVO vo = BeanUtil.copyProperties(shopVO, ShopSearchVO.class);
+            shops.add(vo);
+        }
+
+        //6. 转成string返回
+        String jsonStr = JSONUtil.toJsonStr(shops);
+        log.info("【searchShops(without-distance)  tools查询到的结果：{}】", jsonStr);
+        return jsonStr;
+    }
+
+
+    //查找商店的评价信息
+    public String SearchShopDetails(Long shopId) {
+        log.info("【触发函数查询shopId：{}】", shopId);
+        if (shopId == null || shopId < 1) {
+            return "商店id不正确，无法执行查询";
+        }
+        LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getShopId, shopId)
+                .eq(Comment::getHidden, StatusEnum.ENABLE.getId())
+                .orderByDesc(Comment::getCreateTime)
+                .last("Limit 10");
+        List<Comment> comments = commentMapper.selectList(wrapper);
+        if (comments == null || comments.isEmpty()) {
+            return "该商店暂时没有用户发布评价";
+        }
+        List<String> assesses = comments.stream().map(Comment::getContent).toList();
+        return JSONUtil.toJsonStr(assesses);
+    }
+
+    //代写评价
+    public String writeComment(AiCommentDTO dto,Long userId) {//传递userID过来
+        ThreadLocalUtil.setUserId(userId);
+        CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
+        Result<Long> result = commentService.addComment(commentDTO);
+        if (!result.getCode().equals(200)) {
+            return "写评价失败了";
+        }
+        return "评价发布成功";
+    }
+
+
+}

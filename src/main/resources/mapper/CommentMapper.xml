@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.starrysky.lifemini.mapper.CommentMapper">
+
+    <update id="persistentLikeDislike">
+        update tb_comment
+        set
+        like_num = case id
+        <foreach item="item" collection="updates">
+            when #{item.commentId} then #{item.likeNum}
+        </foreach>
+        end,
+        dislike_num = case id
+            <foreach item="item" collection="updates">
+                when #{item.commentId} then #{item.dislikeNum}
+            </foreach>
+        end
+        where id in
+        <foreach item="item" collection="updates" separator="," open="(" close=")">
+            #{item.commentId}
+        </foreach>
+    </update>
+</mapper>
