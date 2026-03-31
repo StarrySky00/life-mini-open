@@ -66,7 +66,7 @@
 git@github.com:StarrySky00/life-mini-open.git
 
 # 2. 导入 SQL 脚本
-# 数据库脚本位于 /life-mini.sql文件
+# 数据库脚本位于 src/main/resources/sql 文件
 
 # 3. 修改配置
 # 将 application-example.yml 复制为 application-local.yml，并填入你的 配置 信息。
