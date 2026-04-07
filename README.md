@@ -117,7 +117,7 @@
 
 ### 1. 克隆项目
 ``` bash
-git clone git@github.com:StarrySky00/life-mini-open.git
+git clone git@github.com:StarrySky00/LifeMini.git
 cd life-mini-open
 ```
 ### 2. 数据库初始化
