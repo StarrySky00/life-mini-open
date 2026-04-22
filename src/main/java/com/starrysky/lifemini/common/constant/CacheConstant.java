@@ -34,7 +34,8 @@ public class CacheConstant {
     /*
     * 验证码相关key
     * */
-    public static final Object VERIFICATION_CODE = "verification:";
+    public static final Object VERIFICATION_CODE_ADMIN = "verification:admin:";
+    public static final Object VERIFICATION_CODE_USER = "verification:user:";
     public static final Object SMS_COUNT_SINGLE = "sms:count:single:";
     public static final Object SMS_COUNT_GLOBAL = "sms:count:global:";
 
@@ -72,6 +73,8 @@ public class CacheConstant {
     /**
      * Email发送验证码每日限制数量
      */
-    public static final String EMAIL_CODE_LIMIT_PRX = "Email:code:";
+    public static final String EMAIL_CODE_LIMIT_ADMIN_PRX = "Email:code:admin:";
+    public static final String EMAIL_CODE_LIMIT_USER_PRX = "Email:code:user:";
     public static final String MUTE_KEY = "lifemini:sys:mute";
+    public static final String UPDATE_PASSWORD_ERROR = "update:password:error:";
 }

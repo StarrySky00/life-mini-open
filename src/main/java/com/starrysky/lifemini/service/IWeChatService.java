@@ -11,12 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface IWeChatService {
-    //微信登录
+   /* //微信登录
     Result wxLogin(String code);
 
     //微信登录绑定手机号
     Result bindWechatPhone(WechatBindPhoneDTO bindDTO);
-
+*/
     /**
      * 检查图片是否违规
      * @param imageBytes

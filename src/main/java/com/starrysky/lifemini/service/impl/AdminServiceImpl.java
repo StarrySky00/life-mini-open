@@ -8,6 +8,8 @@ import com.starrysky.lifemini.common.constant.DataConstant;
 import com.starrysky.lifemini.common.constant.JwtClaimsConstant;
 import com.starrysky.lifemini.common.constant.MessageConstant;
 import com.starrysky.lifemini.common.enums.RoleEnum;
+import com.starrysky.lifemini.model.dto.AdminLoginDTO;
+import com.starrysky.lifemini.model.dto.AdminRegisterDTO;
 import com.starrysky.lifemini.model.dto.UserLoginDTO;
 import com.starrysky.lifemini.model.dto.UserRegisterDTO;
 import com.starrysky.lifemini.model.entity.Admin;
@@ -66,12 +68,12 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
         String code = CodeUtil.generateCode();
         log.info("【【【验证码】】】：{}", code);
-        String key = CacheConstant.VERIFICATION_CODE + phone;
+        String key = CacheConstant.VERIFICATION_CODE_ADMIN + phone;
         stringRedisTemplate.opsForValue().set(key, code, 60 * 5, TimeUnit.SECONDS);
 
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern(DataConstant.DATE_FORMAT));
         //把验证码通过Email发送给我
-        String codeKey = CacheConstant.EMAIL_CODE_LIMIT_PRX + date;
+        String codeKey = CacheConstant.EMAIL_CODE_LIMIT_ADMIN_PRX + date;
         Long limit = stringRedisTemplate.opsForValue().increment(codeKey);
         stringRedisTemplate.expire(codeKey, 24, TimeUnit.HOURS);
         if (limit != null && limit <= 3) {
@@ -89,10 +91,10 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
      * @return
      */
     @Override
-    public Result register(UserRegisterDTO dto) {
+    public Result register(AdminRegisterDTO dto) {
         log.info("注册管理员");
         //1. 判断验证码是否正确
-        String aldCode = stringRedisTemplate.opsForValue().get(CacheConstant.VERIFICATION_CODE + dto.getPhone());
+        String aldCode = stringRedisTemplate.opsForValue().get(CacheConstant.VERIFICATION_CODE_ADMIN + dto.getPhone());
         if (aldCode == null || !aldCode.equals(dto.getCode())) {
             return Result.error(MessageConstant.VERIFICATION_CODE + MessageConstant.INVALID);
         }
@@ -113,7 +115,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         //5. 保存信息
         save(admin);
         //6. 删除验证码
-        stringRedisTemplate.delete(CacheConstant.VERIFICATION_CODE + dto.getPhone());
+        stringRedisTemplate.delete(CacheConstant.VERIFICATION_CODE_ADMIN + dto.getPhone());
         return Result.success(MessageConstant.REGISTER + MessageConstant.SUCCESS, admin.getPhone());
     }
 
@@ -124,7 +126,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
      * @return
      */
     @Override
-    public Result login(UserLoginDTO dto) {
+    public Result login(AdminLoginDTO dto) {
         log.info("管理员登录");
         String phone = dto.getPhone();
         Admin admin = adminMapper.getUserByPhone(phone);

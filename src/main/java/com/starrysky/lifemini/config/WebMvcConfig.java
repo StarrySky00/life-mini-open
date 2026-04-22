@@ -63,11 +63,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/shop/*",
                         "/shop-category/**",
                         "/keyword-dict/**",
-                        "/user/sendVerificationCode",
                         "/user/register",
                         "/user/login",
-                        "/user/sendVerificationCode",
+                        "/user/sendVerificationCode/**",
                         "/user/wx/**",
+                        "/user/findPassword",
 
                         "/admin/login",
                         "/admin/register",

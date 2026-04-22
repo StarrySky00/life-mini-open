@@ -19,7 +19,7 @@ import java.io.Serializable;
  * @since 2026-01-15
  */
 @Data
-public class UserRegisterDTO implements Serializable {
+public class AdminRegisterDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -32,10 +32,10 @@ public class UserRegisterDTO implements Serializable {
     @Password(message = "密码由字母数字_与.构成，长度6-20")
     private String password;
 
-    @Schema(description = "邮箱(登录/注册唯一标识)",requiredMode = Schema.RequiredMode.REQUIRED)
-    @Email(message = "邮箱格式不正确")
-    @NotBlank(message = "邮箱不能为空")
-    private String email;
+    @Schema(description = "手机号(登录/注册唯一标识)",requiredMode = Schema.RequiredMode.REQUIRED)
+    @Phone(message = "手机号格式不正确")
+    @NotBlank(message = "手机号不能为空")
+    private String phone;
 
     @Schema(description = "验证码",requiredMode = Schema.RequiredMode.REQUIRED)
     private String code;

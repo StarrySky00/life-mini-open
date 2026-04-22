@@ -56,7 +56,7 @@ public class WeChatServiceImpl implements IWeChatService {
     private static final String TEXT_CHECK_URL = "https://api.weixin.qq.com/wxa/msg_sec_check?access_token=";
 
 
-    //微信登录
+    /*//微信登录
     public Result wxLogin(String code) {
         log.info("微信小程序登录，code: {}", code);
         // 1. 请求微信服务器，用 code 换取 openid
@@ -88,18 +88,17 @@ public class WeChatServiceImpl implements IWeChatService {
         stringRedisTemplate.opsForValue().set(CacheConstant.TOKEN + user.getId(), token, 6, TimeUnit.HOURS);
 
         return Result.success(MessageConstant.LOGIN + MessageConstant.SUCCESS, token);
-    }
+    }*/
 
 
-    //绑定手机号
+    /*//绑定手机号
     public Result bindWechatPhone(WechatBindPhoneDTO bindDTO) {
         log.info("用户绑定手机号");
         String phoneCode = bindDTO.getPhoneCode();
         String openid = bindDTO.getOpenid();
-        /*
-         * 因为微信没有提供给个人开发者获取phoneCode的权限，所以这里无法通过phoneCode获取手机号
-         * 测试方案：前端传的phoneCode为手动输入的手机号
-         * */
+
+        //因为微信没有提供给个人开发者获取phoneCode的权限，所以这里无法通过phoneCode获取手机号
+        //测试方案：前端传的phoneCode为手动输入的手机号
         //String phone = getPhoneNumberFromWechat(phoneCode, openid);
         String phone = phoneCode;
 
@@ -131,8 +130,6 @@ public class WeChatServiceImpl implements IWeChatService {
                 userMapper.updateById(user);
             }
         }
-
-
         //3. 生成jwt令牌
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.ROLE, RoleEnum.USER.getRole());
@@ -143,7 +140,7 @@ public class WeChatServiceImpl implements IWeChatService {
         stringRedisTemplate.opsForValue().set(CacheConstant.TOKEN + user.getId(), token, 6, TimeUnit.HOURS);
 
         return Result.success(MessageConstant.LOGIN + MessageConstant.SUCCESS, token);
-    }
+    }*/
 
     //检查图片
     public boolean checkImage(byte[] imageBytes) {

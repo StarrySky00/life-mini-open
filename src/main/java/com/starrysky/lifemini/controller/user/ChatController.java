@@ -21,7 +21,7 @@ public class ChatController {
     private ChatService chatService;
 
     @GetMapping("/location")
-    @Operation(summary = "刷新用户位置坐标（进入对话界面时主动获取一次）")
+    @Operation(summary = "刷新用户位置坐标（进入对话界面时主动获取一次）用户坐标都默认为（112.5,33.0）")
     public Result<Void> takeUserLocation(@RequestParam(name = "用户经度") Double longitude,
                                          @RequestParam(name = "用户纬度") Double latitude) {
         return chatService.saveUserLocation(longitude,latitude);

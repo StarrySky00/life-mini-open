@@ -9,8 +9,17 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+
+/**
+ * <p>
+ * 用户信息表
+ * </p>
+ *
+ * @author StarrySky
+ * @since 2026-01-15
+ */
 @Data
-public class UserDeleteDTO implements Serializable {
+public class AdminLoginDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -20,9 +29,9 @@ public class UserDeleteDTO implements Serializable {
     @Pattern(regexp = "^[a-zA-Z0-9._]{6,20}$",message = "密码必须由字母数字下划线.构成，长度6-20")
     private String password;
 
-    @Schema(description = "邮箱(登录/注册唯一标识)",requiredMode = Schema.RequiredMode.REQUIRED)
-    @Email(message = "邮箱格式不正确")
-    @NotBlank(message = "邮箱不能为空")
-    private String email;
+    @Schema(description = "手机号(登录/注册唯一标识)",requiredMode = Schema.RequiredMode.REQUIRED)
+    @Phone(message = "手机号格式不正确")
+    @NotBlank(message = "手机号不能为空")
+    private String phone;
 
 }

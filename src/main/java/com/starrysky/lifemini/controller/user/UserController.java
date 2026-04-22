@@ -10,7 +10,9 @@ import com.starrysky.lifemini.service.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,11 +27,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/user")
 @Tag(name = "（用户端）用户", description = "用户相关接口")
+@Validated
 public class UserController {
     @Autowired
     private IUserService userService;
 
-    @GetMapping("/wx/login/{code}")
+    /*@GetMapping("/wx/login/{code}")
     @Operation(summary = "微信登录")
     public Result wxLogin(@PathVariable("code") String code) {
         return userService.wxLogin(code);
@@ -39,15 +42,16 @@ public class UserController {
     @Operation(summary = "微信登录绑定手机号")
     public Result bindWechatPhone(@RequestBody @Valid WechatBindPhoneDTO bindDTO) {
         return userService.bindWechatPhone(bindDTO);
-    }
-
-    /*@GetMapping("/sendVerificationCode")
-    @Operation(summary = "发送验证码")
-    public Result<String> sendVerificationCode(@RequestParam String phone) {
-        return userService.sendVerificationCode(phone);
     }*/
 
-   /* @PostMapping("/register")
+    @GetMapping("/sendVerificationCode/{type}")////1-邮箱注册  2-找回密码
+    @Operation(summary = "发送验证码")
+
+    public Result<String> sendVerificationCode(@RequestParam("email")String email,@PathVariable("type") Integer type) {
+        return userService.sendVerificationCode(email,type);
+    }
+
+    @PostMapping("/register")
     @Operation(summary = "用户注册")
     public Result<String> register(@RequestBody @Valid UserRegisterDTO dto) {
         return userService.register(dto);
@@ -57,7 +61,7 @@ public class UserController {
     @Operation(summary = "用户登录")
     public Result<String> login(@RequestBody @Valid UserLoginDTO dto) {
         return userService.login(dto);
-    }*/
+    }
 
     @PostMapping("/update/avatar")
     @CheckRole(RoleEnum.USER)
@@ -80,7 +84,7 @@ public class UserController {
         return userService.updateUserInfo(dto);
     }
 
-   /* @PostMapping("/update/password")
+    @PostMapping("/update/password")
     @CheckRole(RoleEnum.USER)
     @Operation(summary = "修改用户密码")
     public Result<Void> updatePassword(@RequestBody @Valid UserPasswordDTO dto,
@@ -94,7 +98,6 @@ public class UserController {
     public Result<Void> findPassword(@RequestBody @Valid FindPasswordDTO dto) {
         return userService.findPassword(dto);
     }
-*/
     @PostMapping("/logout")
     @CheckRole(RoleEnum.USER)
     @Operation(summary = "退出登录")
@@ -109,5 +112,4 @@ public class UserController {
                                 @RequestHeader("Authorization") String token) {
         return userService.deleteAccount(dto, token);
     }
-
 }
