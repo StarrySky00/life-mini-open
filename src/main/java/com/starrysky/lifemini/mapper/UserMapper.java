@@ -31,9 +31,9 @@ public interface UserMapper extends BaseMapper<User> {
                 create_time,
                 update_time
             from tb_user
-            where phone = #{phone}
+            where email = #{email}
              """)
-    User getUserByPhone(@Param("phone") String phone);
+    User getUserByEmail(@Param("email") String email);
 
     @Update("update tb_user set avatar = #{avatarUrl} where id = #{id} ")
     void updateAvatar(@Param("id") Long id,
@@ -43,8 +43,8 @@ public interface UserMapper extends BaseMapper<User> {
     void updatePasswordById(@Param("newEncodedPwd") String newEncodedPwd,
                             @Param("userId") Long userId);
 
-    @Update("update tb_user set password = #{password} where phone = #{phone}")
-    void updatePasswordByPhone(@Param("phone") String phone,
+    @Update("update tb_user set password = #{password} where email = #{email}")
+    void updatePasswordByEmail(@Param("email") String email,
                                @Param("password") String password);
 
     @Update("update tb_user set status = #{status} where id = #{userId}")
@@ -70,4 +70,8 @@ public interface UserMapper extends BaseMapper<User> {
 
     @Select("select * from tb_user where openid = #{openid}")
     User getUserByOpenid(@Param("openid") String openid);
+
+
+    @Select("select email from tb_user where email = #{email}")
+    String getEmailByEmail(String email);
 }

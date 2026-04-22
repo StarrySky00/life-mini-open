@@ -1,5 +1,7 @@
 package com.starrysky.lifemini.service;
 
+import com.starrysky.lifemini.model.dto.AdminLoginDTO;
+import com.starrysky.lifemini.model.dto.AdminRegisterDTO;
 import com.starrysky.lifemini.model.dto.UserLoginDTO;
 import com.starrysky.lifemini.model.dto.UserRegisterDTO;
 import com.starrysky.lifemini.model.entity.Admin;
@@ -20,8 +22,8 @@ public interface IAdminService extends IService<Admin> {
     Result<String> sendVerificationCode(String phone);
 
     //管理员注册
-    Result<String> register(UserRegisterDTO dto);
+    Result<String> register(AdminRegisterDTO dto);
 
     //管理员登录
-    Result<String> login(UserLoginDTO dto);
+    Result<String> login(AdminLoginDTO dto);
 }

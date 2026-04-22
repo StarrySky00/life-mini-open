@@ -9,4 +9,5 @@ public interface EmailService {
      */
     void sendEmailToAdmin(String code,String phone);
     void sendEmail(String subject,String text);
+    void sendEmailToUser(String code,String email);
 }

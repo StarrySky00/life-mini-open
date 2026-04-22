@@ -35,6 +35,9 @@ public class User implements Serializable {
     @Schema(description = "openId")
     private String openid;
 
+    @Schema(description = "email")
+    private String email;
+
     @Schema(description = "用户名")
     private String username;
 

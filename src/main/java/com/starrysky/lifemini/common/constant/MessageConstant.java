@@ -75,4 +75,8 @@ public class MessageConstant {
     public static final String CONTENT_VIOLATION = "内容违规";
     public static final String FILE_SIZE_EXCEED_LIMIT = "文件大小超出限制";
     public static final String IMAGE_VIOLATION = "图片违规";
+    public static final String CODE_LIMIT = "验证码服务被限制";
+    public static final String VIOLATION = "违规";
+    public static final String PASSWORD_ERROR_TOO_MANY_TIMES = "用户密码输入错误次数过多，请稍后再试";
+    public static final String EMAIL_PATTERN_ERROR = "邮箱格式错误";
 }

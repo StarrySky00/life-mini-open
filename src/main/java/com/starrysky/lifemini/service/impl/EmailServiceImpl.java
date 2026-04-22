@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,6 +21,7 @@ public class EmailServiceImpl implements EmailService {
     private String toEmail;
 
     @Override
+    @Async
     public void sendEmailToAdmin(String code, String phone) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -35,6 +37,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    @Async
     public void sendEmail(String subject, String text) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -46,6 +49,21 @@ public class EmailServiceImpl implements EmailService {
         }catch (Exception e){
             log.error("初始化异常邮件发送失败",e);
             throw new RuntimeException("初始化异常邮件发送失败");
+        }
+    }
+    @Override
+    @Async
+    public void sendEmailToUser(String code, String email) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(email);
+            message.setSubject("巷口索引【注册验证码】");
+            message.setText(String.format("用户注册验证码(5分钟内有效)\n\n验证码：%s\n请及时通过验证\n\n         ---巷口索引【LifeMini】",code));
+            javaMailSender.send(message);
+        }catch (Exception e){
+            log.error("用户端注册验证码发送失败",e);
+            throw new RuntimeException("邮件服务异常");
         }
     }
 }

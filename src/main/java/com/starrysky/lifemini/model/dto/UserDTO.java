@@ -2,6 +2,7 @@ package com.starrysky.lifemini.model.dto;
 
 import com.starrysky.lifemini.common.annotation.Phone;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import lombok.Data;
 
 import java.io.Serial;
@@ -24,9 +25,6 @@ public class UserDTO implements Serializable {
     @Schema(description = "用户名")
     private String username;
 
-    @Schema(description = "手机号(登录/注册唯一标识)")
-    @Phone(message = "手机号格式不正确")
-    private String phone;
 
     @Schema(description = "用户消费偏好(如：爱吃辣,预算50)")
     private String preferences;

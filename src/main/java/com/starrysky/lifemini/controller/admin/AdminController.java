@@ -29,7 +29,7 @@ public class AdminController {
     @PostMapping("/register")
     @Operation(summary = "管理员注册")
     @CheckRole(RoleEnum.ADMIN)
-    public Result<String> register(@RequestBody @Valid UserRegisterDTO dto) {
+    public Result<String> register(@RequestBody @Valid AdminRegisterDTO dto) {
         return adminService.register(dto);
         //return Result.error("此功能暂未开放");
     }
@@ -37,7 +37,7 @@ public class AdminController {
     @PostMapping("/login")
     @CheckRole(RoleEnum.ADMIN)
     @Operation(summary = "管理员登录")
-    public Result<String> login(@RequestBody @Valid UserLoginDTO dto) {
+    public Result<String> login(@RequestBody @Valid AdminLoginDTO dto) {
         return adminService.login(dto);
     }
 

@@ -27,8 +27,8 @@ public class UserVO implements Serializable {
     @Schema(description = "用户名")
     private String username;
 
-    @Schema(description = "手机号(登录/注册唯一标识)")
-    private String phone;
+    @Schema(description = "邮箱(登录/注册唯一标识)")
+    private String email;
     @Schema(description = "用户头像URL")
     private String avatar;
 
