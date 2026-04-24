@@ -11,6 +11,7 @@ public class MetaDataConstant {
      */
     public static final String SHOP_ID = "shop_id";
     /**
+     *
      * 评价id
      */
     public static final String COMMENT_ID = "comment_id";
