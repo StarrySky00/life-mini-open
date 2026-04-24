@@ -7,6 +7,7 @@ package com.starrysky.lifemini.common.constant;
 
 public class MetaDataConstant {
     /**
+     *
      * 商店id
      */
     public static final String SHOP_ID = "shop_id";
