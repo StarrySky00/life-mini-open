@@ -66,14 +66,7 @@ public class CommonTools {
     @Tool(description = "【前置工具】当需要搜索商店（searchShops）但不知道确切的分类ID时，必须先调用此工具获取分类字典。")
     public String queryShopCategory() {
         log.debug("【AI.CommonTools】查询店铺的分类列表工具被调用");
-        List<ShopCategorySimpleDTO> scs = shopCategoryService.queryShopCategorySimpleList();
-        // 用{id,keyword}的格式返回给大模型看
-        StringBuilder sb = new StringBuilder("分类列表格式{categoryId：category},列表为：");
-        for (ShopCategorySimpleDTO sc : scs) {
-            sb.append("{").append(+sc.getId()).append("：").append(sc.getCategoryName()).append("},");
-        }
-        sb.replace(sb.length() - 1, sb.length(), "。");//去掉最后一个逗号
-        String scStr = sb.toString();
+        String scStr=shopCategoryService.queryShopCategoryStr();
         log.debug("【AI.CommonTools】查询店铺的分类列表结果：{}", scStr);
         return scStr;
     }
