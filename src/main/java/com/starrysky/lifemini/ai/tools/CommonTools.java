@@ -5,6 +5,7 @@ import com.starrysky.lifemini.model.dto.ShopCategorySimpleDTO;
 import com.starrysky.lifemini.model.entity.KeywordDict;
 import com.starrysky.lifemini.service.IKeywordDictService;
 import com.starrysky.lifemini.service.IShopCategoryService;
+import com.starrysky.lifemini.service.IShopService;
 import com.starrysky.lifemini.service.VectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,8 @@ import java.util.stream.Collectors;
 public class CommonTools {
     private final IKeywordDictService keywordDictService;
     private final IShopCategoryService shopCategoryService;
-    private final VectorStore qdrantVectorService;
+
+    private final IShopService shopService;
 
 
     /**
@@ -38,20 +40,7 @@ public class CommonTools {
      */
     @Tool(description = "【模糊语义搜索】当用户提出的需求比较主观、模糊（例如：安静适合学习的地方、情侣约会、菜品偏辣的店），无法用具体的分类和关键词精确定位时，调用此工具从向量库检索上下文。")
     public String queryBackInfo(@ToolParam(description = "用户输入的内容") String content) {
-        log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文工具被调用");
-        SearchRequest request = SearchRequest.builder()
-                .query(content)
-                .topK(5)
-                .similarityThreshold(0.65d)
-                .filterExpression("status == 1")
-                .build();
-        List<Document> documents = qdrantVectorService.similaritySearch(request);
-        if(documents.isEmpty()){
-            return "暂无语义相关的商铺或评价信息。";
-        }
-        String docsStr = documents.stream()
-                .map(Document::getText)
-                .collect(Collectors.joining("\n---\n"));
+       String docsStr= shopService.queryBackInfo(content);
         log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文结果：{}", docsStr);
         return docsStr;
     }

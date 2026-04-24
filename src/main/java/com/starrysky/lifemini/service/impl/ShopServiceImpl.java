@@ -34,6 +34,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -73,6 +76,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private final ShopCategoryMapper shopCategoryMapper;
     private final Executor cacheExecutor;
     private final Executor dbExecutor;
+    private final VectorStore qdrantVectorService;
     @Resource
     @Lazy
     private IShopService shopService;
@@ -717,5 +721,28 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             count = shopMapper.selectCount(new LambdaQueryWrapper<Shop>().eq(Shop::getStatus, status));
         }
         return Result.success(count);
+    }
+
+
+
+    // ******************** Tools/************************
+
+    @Override
+    public String queryBackInfo(String content) {
+        log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文工具被调用");
+        SearchRequest request = SearchRequest.builder()
+                .query(content)
+                .topK(5)
+                .similarityThreshold(0.65d)
+                .filterExpression("status == 1")
+                .build();
+        List<Document> documents = qdrantVectorService.similaritySearch(request);
+        if(documents.isEmpty()){
+            return "暂无语义相关的商铺或评价信息。";
+        }
+
+        return documents.stream()
+                .map(Document::getText)
+                .collect(Collectors.joining("\n---\n"));
     }
 }
