@@ -52,10 +52,6 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
     private final FileService fileService;
     private final Executor dbExecutor;
 
-    @Autowired()
-    @Lazy
-    private IShopCategoryService shopCategoryService;
-
     //查询商店所有分类
     @Override
     @Cacheable(//写入缓存
@@ -191,8 +187,6 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
      * @return
      */
     @Override
-    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SIMPLE_CATEGORY)
     public List<ShopCategorySimpleDTO> queryShopCategorySimpleList() {
         List<ShopCategorySimpleDTO> list = shopCategoryMapper.queryShopCategorySimpleList();
         return list;
@@ -203,8 +197,11 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
      * @return
      */
     @Override
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+            cacheNames = CacheConstant.SIMPLE_CATEGORY)
+    ////TODO 删除缓存功能
     public String queryShopCategoryStr() {
-        List<ShopCategorySimpleDTO> scs = shopCategoryService.queryShopCategorySimpleList();
+        List<ShopCategorySimpleDTO> scs = queryShopCategorySimpleList();
         // 用{id,keyword}的格式返回给大模型看
         StringBuilder sb = new StringBuilder("分类列表格式{categoryId：category},列表为：");
         for (ShopCategorySimpleDTO sc : scs) {

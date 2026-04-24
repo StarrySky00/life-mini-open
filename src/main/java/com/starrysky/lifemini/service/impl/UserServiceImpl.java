@@ -27,6 +27,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -518,13 +519,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
 
     //查询用户偏好信息
-
+    //TODO 本地缓存用户信息
     @Override
     public String getUserProfile(Long userId) {
         if (userId == null) {
             return "用户口味偏好：无";
         }
-        User user =getById(userId);
+        User user = getById(userId);
         if (user == null) {
             return "用户口味偏好：无";
         }
@@ -536,7 +537,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         return "用户口味偏好：" + preferences;
     }
 
-    //
+    //查询用户当前位置
     @Override
     public String getUserLocation(Long userId) {
         if (userId == null) {
@@ -551,7 +552,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String key = CacheConstant.USER_LOCATION + userId;
         List<Object> objects = stringRedisTemplate.opsForHash().multiGet(key, DataConstant.LOCATION);//x,y
         if (objects.size() >= 2 && objects.get(0) != null && objects.get(1) != null) {
-            locationStr="当前用户坐标{longitude = " + TypeConversionUtil.ToDouble(objects.get(0)) + " , latitude = " + TypeConversionUtil.ToDouble(objects.get(1)) + "}";
+            locationStr = "当前用户坐标{longitude = " + TypeConversionUtil.ToDouble(objects.get(0)) + " , latitude = " + TypeConversionUtil.ToDouble(objects.get(1)) + "}";
         }
         log.debug("当前用户的距离信息为：{}", locationStr);
         // 获取用户当前位置

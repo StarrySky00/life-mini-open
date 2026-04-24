@@ -729,11 +729,10 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Override
     public String queryBackInfo(String content) {
-        log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文工具被调用");
         SearchRequest request = SearchRequest.builder()
                 .query(content)
                 .topK(5)
-                .similarityThreshold(0.65d)
+                .similarityThreshold(0.55d)
                 .filterExpression("status == 1")
                 .build();
         List<Document> documents = qdrantVectorService.similaritySearch(request);
