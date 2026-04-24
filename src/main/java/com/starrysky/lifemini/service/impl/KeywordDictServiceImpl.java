@@ -37,9 +37,6 @@ public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, Keywo
 
     private final ShopMapper shopMapper;
     private final KeywordDictMapper keywordDictMapper;
-    @Autowired
-    @Lazy
-    private IKeywordDictService keywordDictService;
 
     /**
      * 查询keyword列表
@@ -120,9 +117,6 @@ public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, Keywo
      *
      * @return
      */
-    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SIMPLE_KEYWORD
-    )
     @Override
     public List<KeywordSimpleDTO> querySimpleKeywordList() {
         List<KeywordSimpleDTO> list = keywordDictMapper.queryKeywordSimpleList();
@@ -135,8 +129,12 @@ public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, Keywo
      * @return
      */
     @Override
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+            cacheNames = CacheConstant.SIMPLE_KEYWORD
+    )
+    //TODO 删除缓存功能
     public String queryKeywordsStr() {
-        List<KeywordSimpleDTO> kws = keywordDictService.querySimpleKeywordList();
+        List<KeywordSimpleDTO> kws = querySimpleKeywordList();
         // 用{id,keyword}的格式返回给大模型看
         StringBuilder sb = new StringBuilder("关键词列表格式{keywordId：keyword},列表为：");
         for (KeywordSimpleDTO kw : kws) {
