@@ -1,5 +1,6 @@
 package com.starrysky.lifemini.service;
 
+import com.starrysky.lifemini.model.dto.AiCommentDTO;
 import com.starrysky.lifemini.model.dto.CommentDTO;
 import com.starrysky.lifemini.model.dto.PageQueryDTO;
 import com.starrysky.lifemini.model.entity.Comment;
@@ -8,6 +9,7 @@ import com.starrysky.lifemini.model.result.PageResult;
 import com.starrysky.lifemini.model.vo.CommentAdminVO;
 import com.starrysky.lifemini.model.vo.CommentVO;
 import com.starrysky.lifemini.model.result.Result;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -45,4 +47,12 @@ public interface ICommentService extends IService<Comment> {
 
     //查询我发布的评价
     PageResult<Comment> queryMyComments(Boolean isAsc,PageQueryDTO dto);
+
+    /**
+     * 帮助用户写评价
+     * @param dto
+     * @param context
+     * @return
+     */
+    String helpWriteComment(AiCommentDTO dto);
 }

@@ -27,12 +27,11 @@ public class CommentTools {
     public String writeComment(AiCommentDTO dto, ToolContext context) {//传递userID过来
         log.debug("【AI.CommentTools】写评价工具被调用，参数：{}", dto);
         Long userId = (Long) context.getContext().get("userId");
-        ThreadLocalUtil.setUserId(userId);
-        CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
-        Result<Long> result = commentService.addComment(commentDTO);
-        if (!result.getCode().equals(200)) {
-            return "写评价失败了，可能是商店id不存在，或者评价内容不合法等原因导致的哦，请告知用户检查一下输入的内容，或者稍后再试试吧！";
+        try {
+            ThreadLocalUtil.setUserId(userId);
+            return commentService.helpWriteComment(dto);
+        } finally {
+            ThreadLocalUtil.removeUserId();
         }
-        return "评价发布成功";
     }
 }

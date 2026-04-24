@@ -16,6 +16,7 @@ import com.starrysky.lifemini.common.enums.StatusEnum;
 import com.starrysky.lifemini.common.util.ImageUtils;
 import com.starrysky.lifemini.mapper.ShopMapper;
 import com.starrysky.lifemini.mapper.UserMapper;
+import com.starrysky.lifemini.model.dto.AiCommentDTO;
 import com.starrysky.lifemini.model.dto.CommentDTO;
 import com.starrysky.lifemini.model.dto.PageQueryDTO;
 import com.starrysky.lifemini.model.dto.UserInfoDTO;
@@ -35,6 +36,10 @@ import com.starrysky.lifemini.service.IUserService;
 import com.starrysky.lifemini.service.IWeChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.RedisHashCommands;
 import org.springframework.data.redis.core.Cursor;
@@ -75,6 +80,10 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private final Executor cacheExecutor;
     private final IUserService userService;
     private final IWeChatService weChatService;
+
+    @Autowired
+    @Lazy
+    private ICommentService commentService;
 
 
     /**
@@ -522,5 +531,20 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             return PageResult.success();
         }
         return PageResult.success(comments.size() >= dto.getPageSize(), comments);
+    }
+
+    /**
+     * 帮助用户写评价
+     * @param dto
+     * @return
+     */
+    @Override
+    public String helpWriteComment(AiCommentDTO dto) {
+        CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
+        Result<Long> result = commentService.addComment(commentDTO);
+        if (!result.getCode().equals(200)) {
+            return "写评价失败了，可能是商店id不存在，或者评价内容不合法等原因导致的哦，请告知用户检查一下输入的内容，或者稍后再试试吧！";
+        }
+        return "评价发布成功";
     }
 }

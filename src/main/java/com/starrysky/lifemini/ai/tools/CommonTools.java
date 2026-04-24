@@ -40,6 +40,7 @@ public class CommonTools {
      */
     @Tool(description = "【模糊语义搜索】当用户提出的需求比较主观、模糊（例如：安静适合学习的地方、情侣约会、菜品偏辣的店），无法用具体的分类和关键词精确定位时，调用此工具从向量库检索上下文。")
     public String queryBackInfo(@ToolParam(description = "用户输入的内容") String content) {
+        log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文工具被调用，用户输入内容：{}", content);
        String docsStr= shopService.queryBackInfo(content);
         log.debug("【AI.CommonTools】从商店信息或者评价信息中提取语义相近的上下文结果：{}", docsStr);
         return docsStr;
