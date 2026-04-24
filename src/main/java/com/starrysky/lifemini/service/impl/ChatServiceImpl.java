@@ -69,7 +69,7 @@ public class ChatServiceImpl implements ChatService {
         String limitKey = CacheConstant.CHAT_Limit_PRX + dataAndId;
         Long limit = stringRedisTemplate.opsForValue().increment(limitKey);
         stringRedisTemplate.expire(limitKey, 24, TimeUnit.HOURS);
-        if (limit != null && limit > 20) {
+        if (limit != null && limit > 30) {
             log.info("用户{}对话达到限制次数", userId);
             return Flux.just("今日可回复次数达到限制!");
         }
@@ -105,6 +105,7 @@ public class ChatServiceImpl implements ChatService {
                     loc.get(0),
                     loc.get(1)
             );
+
             log.info("【ai开始执行】");
             return chatClient.prompt()
                     .system(systemPrompt)
@@ -169,7 +170,7 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Result saveUserLocation(Double longitude, Double latitude) {
-        log.info("保存用户坐标信息");
+        log.debug("保存用户坐标信息");
         Long userId = ThreadLocalUtil.getUserId();
         if (userId == null) {
             return Result.error(401, MessageConstant.USER + MessageConstant.NOT_LOGIN);

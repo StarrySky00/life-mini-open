@@ -37,6 +37,11 @@ public class RedisChatMemory implements ChatMemory {
     private static final int MAX_LENGTH = 10;
     private static final int MAX_LIMIT = 20;
 
+    @Override
+    public void add(String conversationId, Message message) {
+        add(conversationId, List.of(message));
+    }
+
     //新增对话记录
     @Override
     public void add(String conversationId, List<Message> messages) {
@@ -80,8 +85,13 @@ public class RedisChatMemory implements ChatMemory {
         }
     }
 
-    //获取对话记录
     @Override
+    public List<Message> get(String conversationId) {
+        return get(conversationId, 5);
+    }
+
+    //获取对话记录
+
     public List<Message> get(String conversationId, int lastN) {
         log.info("【执行get】");
         int limit = Math.min(MAX_LENGTH, lastN);
@@ -103,7 +113,10 @@ public class RedisChatMemory implements ChatMemory {
                                         vo.getToolName(),
                                         vo.getText()
                                 );
-                                yield new ToolResponseMessage(List.of(response), Collections.emptyMap());
+                                yield ToolResponseMessage.builder()
+                                        .responses(List.of(response))
+                                        .metadata(Collections.emptyMap())
+                                        .build();
                             }
                             default -> new UserMessage(vo.getText());
                         };

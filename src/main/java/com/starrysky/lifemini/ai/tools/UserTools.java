@@ -43,7 +43,4 @@ public class UserTools {
         Long userId = (Long) context.getContext().get("userId");
         return userService.getUserLocation(userId);
     }
-
-
-
 }

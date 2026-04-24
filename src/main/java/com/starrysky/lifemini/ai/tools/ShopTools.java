@@ -50,35 +50,36 @@ public class ShopTools {
 
 
 
-    @Bean
-    @Description("##1. 根据商店分类ID,商店评价关键词ID列表,用户坐标,距离范围等条件查询符合要求的商店信息")
+ /*   @Bean
+    @Tool(description = "根据商店分类ID,商店评价关键词ID列表,用户坐标,距离范围等条件查询符合要求的商店信息")
     public Function<ShopQuery, String> searchShopsTool() {
         return this::searchShops;
-    }
+    }*/
 
     // 包装一下 Long 参数，防止大模型传参失败
     public record ShopIdRequest(Long shopId) {}
 
-    @Bean
-    @Description("根据商店id查询商店最近发布的十条评价内容")
+    /*@Bean
+    @Tool(description = "根据商店id查询商店最近发布的十条评价内容")
     public Function<ShopIdRequest, String> searchShopDetailsTool() {
         return request -> this.SearchShopDetails(request.shopId());
-    }
+    }*/
 
-    @Bean
-    @Description("根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
+/*    @Bean
+    @Tool(description = "根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
     public BiFunction<AiCommentDTO, ToolContext, String> writeCommentTool() {
         return (dto, toolContext) -> {
             Long userId = (Long) toolContext.getContext().get("userId");
             return this.writeComment(dto, userId);
         };
-    }
+    }*/
 
 
 
 
 
     //根据描述搜索商店
+    @Tool(description ="【结构化搜索】当用户明确要求按距离范围（如附近5km）、特定分类ID、或特定评价关键词ID寻找商铺时，调用此工具。如果需要用到经纬度，请先调用 getUserLocation。")
     public String searchShops(ShopQuery shopQuery) {
 
         if (shopQuery.getCategoryId() == null) {
@@ -247,8 +248,9 @@ public class ShopTools {
         return jsonStr;
     }
 
-
+/*
     //查找商店的评价信息
+    @Tool(description = "根据商店id查询商店最近发布的十条评价内容")
     public String SearchShopDetails(Long shopId) {
         log.info("【触发函数查询shopId：{}】", shopId);
         if (shopId == null || shopId < 1) {
@@ -265,9 +267,10 @@ public class ShopTools {
         }
         List<String> assesses = comments.stream().map(Comment::getContent).toList();
         return JSONUtil.toJsonStr(assesses);
-    }
+    }*/
 
-    //代写评价
+    /*//代写评价
+    @Tool(description = "根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
     public String writeComment(AiCommentDTO dto,Long userId) {//传递userID过来
         ThreadLocalUtil.setUserId(userId);
         CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
@@ -277,6 +280,6 @@ public class ShopTools {
         }
         return "评价发布成功";
     }
-
+*/
 
 }
