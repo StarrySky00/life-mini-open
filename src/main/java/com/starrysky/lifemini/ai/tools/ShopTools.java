@@ -13,6 +13,7 @@ import com.starrysky.lifemini.model.vo.ShopSearchVO;
 import com.starrysky.lifemini.model.vo.ShopVO;
 import com.starrysky.lifemini.service.IShopService;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import com.starrysky.lifemini.service.strategy.ShopSearchStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
@@ -24,6 +25,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * @author StarrySky
+ * @date 2026/4/24 15:18 星期五
+ */
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -32,13 +38,27 @@ public class ShopTools {
     private final IShopService shopService;
     private final StringRedisTemplate stringRedisTemplate;
 
+    private final List<ShopSearchStrategy> strategies;
 
-
+    //根据描述搜索商店
+    @Tool(description = "【结构化搜索】当用户明确要求按距离范围（如附近5km）、特定分类ID、或特定评价关键词ID寻找商铺时，调用此工具。如果需要用到经纬度，请先调用 getUserLocation。")
+    public String searchShops(ShopQuery shopQuery) {
+        log.debug("【触发函数查询 shopQuery：{}】", shopQuery);
+        if (shopQuery.getCategoryId() == null) {
+            return "请用户先描述需要哪种分类的商店";
+        }
+        for (ShopSearchStrategy strategy : strategies) {
+            if (strategy.isSupported(shopQuery)) {
+                return strategy.searchShops(shopQuery);
+            }
+        }
+        return "抱歉，无法处理您的查询请求。请提供更具体的搜索条件，如距离范围、分类ID或关键词ID。";
+    }
 
 
     //根据描述搜索商店
-    @Tool(description ="【结构化搜索】当用户明确要求按距离范围（如附近5km）、特定分类ID、或特定评价关键词ID寻找商铺时，调用此工具。如果需要用到经纬度，请先调用 getUserLocation。")
-    public String searchShops(ShopQuery shopQuery) {
+    //@Tool(description ="【结构化搜索】当用户明确要求按距离范围（如附近5km）、特定分类ID、或特定评价关键词ID寻找商铺时，调用此工具。如果需要用到经纬度，请先调用 getUserLocation。")
+    public String searchShops1(ShopQuery shopQuery) {
 
         if (shopQuery.getCategoryId() == null) {
             return "请用户先描述需要哪种分类的商店";
@@ -131,6 +151,15 @@ public class ShopTools {
         return jsonStr;
     }
 
+    /**
+     * 计算排序分数，综合考虑距离、匹配度和店铺评分
+     *
+     * @param distance  距离（单位：公里）
+     * @param match     匹配度（用户关键词与店铺关键词的匹配数量）
+     * @param score     店铺评分（0-5分）
+     * @param shopQuery 查询参数
+     * @return
+     */
     private double calculateSortScore(double distance, Integer match, double score, ShopQuery shopQuery) {
         double WEIGHT_MATCH = 0.6;  // 60% 权重给匹配度
         double WEIGHT_DIST = 0.3;   // 30% 权重给距离
