@@ -53,14 +53,7 @@ public class CommonTools {
     @Tool(description = "【前置工具】当需要帮用户写评价（writeComment）或按关键词搜索商店前，必须先调用此工具获取合法可用的关键词ID列表。绝对不能凭空捏造ID。")
     public String queryKeyword() {
         log.debug("【AI.CommonTools】查询评价可选关键词列表工具被调用");
-        List<KeywordSimpleDTO> kws = keywordDictService.querySimpleKeywordList();
-        // 用{id,keyword}的格式返回给大模型看
-        StringBuilder sb = new StringBuilder("关键词列表格式{keywordId：keyword},列表为：");
-        for (KeywordSimpleDTO kw : kws) {
-            sb.append("{").append(+kw.getId()).append("：").append(kw.getKeyword()).append("},");
-        }
-        sb.replace(sb.length() - 1, sb.length(), "。");//去掉最后一个逗号
-        String kwStr = sb.toString();
+        String kwStr=keywordDictService.queryKeywordsStr();
         log.debug("【AI.CommonTools】查询评价可选关键词列表结果：{}", kwStr);
         return kwStr;
     }

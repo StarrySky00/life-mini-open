@@ -31,4 +31,10 @@ public interface IKeywordDictService extends IService<KeywordDict> {
     Result<Long> keywordCount();
     //查询keyword简单信息
     List<KeywordSimpleDTO> querySimpleKeywordList();
+
+    /**
+     * 查询keyword列表str
+     * @return
+     */
+    String queryKeywordsStr();
 }
