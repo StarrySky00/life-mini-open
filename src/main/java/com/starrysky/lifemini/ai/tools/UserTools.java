@@ -44,4 +44,5 @@ public class UserTools {
         return userService.getUserLocation(userId);
     }
 
+
 }
