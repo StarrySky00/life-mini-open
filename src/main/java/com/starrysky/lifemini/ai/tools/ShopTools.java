@@ -205,39 +205,4 @@ public class ShopTools {
         log.info("【searchShops(without-distance)  tools查询到的结果：{}】", jsonStr);
         return jsonStr;
     }
-
-/*
-    //查找商店的评价信息
-    @Tool(description = "根据商店id查询商店最近发布的十条评价内容")
-    public String SearchShopDetails(Long shopId) {
-        log.info("【触发函数查询shopId：{}】", shopId);
-        if (shopId == null || shopId < 1) {
-            return "商店id不正确，无法执行查询";
-        }
-        LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<Comment>()
-                .eq(Comment::getShopId, shopId)
-                .eq(Comment::getHidden, StatusEnum.ENABLE.getId())
-                .orderByDesc(Comment::getCreateTime)
-                .last("Limit 10");
-        List<Comment> comments = commentMapper.selectList(wrapper);
-        if (comments == null || comments.isEmpty()) {
-            return "该商店暂时没有用户发布评价";
-        }
-        List<String> assesses = comments.stream().map(Comment::getContent).toList();
-        return JSONUtil.toJsonStr(assesses);
-    }*/
-
-    /*//代写评价
-    @Tool(description = "根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
-    public String writeComment(AiCommentDTO dto,Long userId) {//传递userID过来
-        ThreadLocalUtil.setUserId(userId);
-        CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
-        Result<Long> result = commentService.addComment(commentDTO);
-        if (!result.getCode().equals(200)) {
-            return "写评价失败了";
-        }
-        return "评价发布成功";
-    }
-*/
-
 }
