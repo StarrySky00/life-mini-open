@@ -24,7 +24,6 @@ import java.util.List;
 public class UserTools {
 
     private final IUserService userService;
-    private final StringRedisTemplate stringRedisTemplate;
 
     @Tool(description = "当用户要求推荐、或者询问'适合我'等与个人相关的服务时，调用此工具查询当前用户的个人描述、口味偏好和饮食禁忌等信息。")
     public String getUserProfile(ToolContext context) {

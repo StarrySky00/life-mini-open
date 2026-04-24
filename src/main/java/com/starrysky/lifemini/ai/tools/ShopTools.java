@@ -4,30 +4,18 @@ package com.starrysky.lifemini.ai.tools;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.starrysky.lifemini.common.constant.CacheConstant;
 import com.starrysky.lifemini.common.enums.StatusEnum;
-import com.starrysky.lifemini.common.util.ThreadLocalUtil;
-import com.starrysky.lifemini.mapper.CommentMapper;
 import com.starrysky.lifemini.mapper.ShopMapper;
-import com.starrysky.lifemini.model.dto.AiCommentDTO;
-import com.starrysky.lifemini.model.dto.CommentDTO;
 import com.starrysky.lifemini.model.dto.ShopMatchDTO;
-import com.starrysky.lifemini.model.entity.Comment;
 import com.starrysky.lifemini.model.query.ShopQuery;
 import com.starrysky.lifemini.model.vo.ShopSearchVO;
 import com.starrysky.lifemini.model.vo.ShopVO;
-import com.starrysky.lifemini.model.result.Result;
-import com.starrysky.lifemini.service.ICommentService;
 import com.starrysky.lifemini.service.IShopService;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Description;
 import org.springframework.data.geo.*;
 import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -35,44 +23,14 @@ import org.springframework.data.redis.domain.geo.GeoReference;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class ShopTools {
     private final ShopMapper shopMapper;
-    private final CommentMapper commentMapper;
-    private final ICommentService commentService;
     private final IShopService shopService;
     private final StringRedisTemplate stringRedisTemplate;
-
-
-
- /*   @Bean
-    @Tool(description = "根据商店分类ID,商店评价关键词ID列表,用户坐标,距离范围等条件查询符合要求的商店信息")
-    public Function<ShopQuery, String> searchShopsTool() {
-        return this::searchShops;
-    }*/
-
-    // 包装一下 Long 参数，防止大模型传参失败
-    public record ShopIdRequest(Long shopId) {}
-
-    /*@Bean
-    @Tool(description = "根据商店id查询商店最近发布的十条评价内容")
-    public Function<ShopIdRequest, String> searchShopDetailsTool() {
-        return request -> this.SearchShopDetails(request.shopId());
-    }*/
-
-/*    @Bean
-    @Tool(description = "根据用户描述的内容，帮助用户给商店写评价(不改变原意可适当渲染优化，最多150字)")
-    public BiFunction<AiCommentDTO, ToolContext, String> writeCommentTool() {
-        return (dto, toolContext) -> {
-            Long userId = (Long) toolContext.getContext().get("userId");
-            return this.writeComment(dto, userId);
-        };
-    }*/
 
 
 

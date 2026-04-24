@@ -1,10 +1,7 @@
 package com.starrysky.lifemini.ai.tools;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.starrysky.lifemini.common.util.ThreadLocalUtil;
 import com.starrysky.lifemini.model.dto.AiCommentDTO;
-import com.starrysky.lifemini.model.dto.CommentDTO;
-import com.starrysky.lifemini.model.result.Result;
 import com.starrysky.lifemini.service.ICommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

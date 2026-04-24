@@ -1,24 +1,13 @@
 package com.starrysky.lifemini.ai.tools;
 
-import com.starrysky.lifemini.model.dto.KeywordSimpleDTO;
-import com.starrysky.lifemini.model.dto.ShopCategorySimpleDTO;
-import com.starrysky.lifemini.model.entity.KeywordDict;
 import com.starrysky.lifemini.service.IKeywordDictService;
 import com.starrysky.lifemini.service.IShopCategoryService;
 import com.starrysky.lifemini.service.IShopService;
-import com.starrysky.lifemini.service.VectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.document.Document;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author StarrySky
@@ -31,7 +20,6 @@ import java.util.stream.Collectors;
 public class CommonTools {
     private final IKeywordDictService keywordDictService;
     private final IShopCategoryService shopCategoryService;
-
     private final IShopService shopService;
 
 
