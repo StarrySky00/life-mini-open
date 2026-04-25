@@ -6,6 +6,7 @@ public class CacheConstant {
      */
     public static final String CAFFEINE_CACHE_MANAGER = "caffeineCacheManager";
     public static final String REDIS_CACHE_MANAGER = "redisCacheManager";
+    public static final String CAFFEINE_SHORT_CACHE_MANAGER = "caffeineShortCacheManager";
 
     /*
     缓存相关key
@@ -15,6 +16,7 @@ public class CacheConstant {
     public static final String SHOP_INFO_PRX="shop:info:";
     public static final String COMMENT_CACHE = "commentCache:";
     public static final String KEYWORD_DICT_CACHE = "keywordDictCache";
+    public static final String USER_PROFILE_CACHE = "userProfileCache:";
 
     public static final String GEO_KEY_PRX = "geo:location:";
 
