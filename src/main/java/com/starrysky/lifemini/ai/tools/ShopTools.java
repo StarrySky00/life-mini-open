@@ -41,7 +41,7 @@ public class ShopTools {
     private final List<ShopSearchStrategy> strategies;
 
     //根据描述搜索商店
-    @Tool(description = "【结构化搜索】当用户明确要求按距离范围（如附近5km）、特定分类ID、或特定评价关键词ID寻找商铺时，调用此工具。如果需要用到经纬度，请先调用 getUserLocation。")
+    @Tool(description = "【带距离/分类结构化搜索】警告：如果用户提到了距离（如附近），但没有说明要找什么店，绝对禁止调用此工具，必须先回复询问用户。只有当用户明确指定了商铺分类时才调用。")
     public String searchShops(ShopQuery shopQuery) {
         log.debug("【触发函数查询 shopQuery：{}】", shopQuery);
         if (shopQuery.getCategoryId() == null) {

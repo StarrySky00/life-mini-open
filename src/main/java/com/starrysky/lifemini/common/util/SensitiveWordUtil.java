@@ -1,9 +1,12 @@
 package com.starrysky.lifemini.common.util;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class SensitiveWordUtil {
 
     /* ========== 前缀树节点 ========== */

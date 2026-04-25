@@ -26,17 +26,18 @@ public class CommonTools {
     /**
      * 从商店信息或者评价信息中提取语义相近的上下文
      */
-    @Tool(description = "【模糊语义搜索】当用户提出的需求比较主观、模糊时调用。")
+    @Tool(description = "【默认/模糊语义搜索】处理绝大多数找店、推荐美食、主观感受的需求。")
     public String queryBackInfo(
-            @ToolParam(description = "【核心原则】：不要传入完整的长句子！必须将用户的原始输入与查到的个人偏好进行合并，提炼出核心关键词（以空格分隔）。例如用户问'有没有适合我的早餐店'，偏好是'微辣、奶茶'，则传入：'早餐店 微辣 奶茶'。")
-            String content) {
+            @ToolParam(description = "【参数组装规则】：用户当前意图词为主，个人偏好为辅。你必须剔除与当前意图冲突的偏好标签（例如用户要喝奶茶，必须去掉偏好中的'微辣'，保留'性价比'）。将最终保留的核心词以空格分隔传入。例如：'奶茶 性价比'")
+            String content
+    ) {
         log.debug("【queryBackInfo】AI 提炼的语义相近的上下文检索词：{}", content);
-       String docsStr= shopService.queryBackInfo(content);
+        String docsStr = shopService.queryBackInfo(content);
         log.debug("【queryBackInfo】从商店信息或者评价信息中提取语义相近的上下文结果：{}", docsStr);
         return docsStr;
     }
 
-/*    *//**
+    /*    *//**
      * 查询评价可选的关键词列表
      * @return
      *//*
@@ -50,7 +51,7 @@ public class CommonTools {
     }*/
 
 
-/*    *//**
+    /*    *//**
      * 查询店铺的分类列表
      * @return
      *//*

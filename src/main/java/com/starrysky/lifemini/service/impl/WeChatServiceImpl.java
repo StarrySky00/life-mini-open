@@ -180,7 +180,7 @@ public class WeChatServiceImpl implements IWeChatService {
     }
 
     /**
-     * 检查文本
+     * 检查文本 本地+远程（微信内容安全接口）双重校验
      *
      * @param content 用户输入的评论、留言等内容
      * @return true 表示通过无风险，false 表示包含敏感违规内容
@@ -193,7 +193,7 @@ public class WeChatServiceImpl implements IWeChatService {
         }
         //1. 本地校验
         if (SensitiveWordUtil.containsSensitive(content)) {
-            log.debug("文本 本地检查未通过");
+            log.debug("本地文本检查未通过");
             return false;
         }
         //2. 远程校验
@@ -212,7 +212,7 @@ public class WeChatServiceImpl implements IWeChatService {
                     .execute()
                     .body();
 
-            log.info("微信文本安全校验返回: {}", resBody);
+            log.debug("微信文本安全校验返回: {}", resBody);
 
             if (resBody != null && !resBody.isEmpty()) {
                 JSONObject resultMap = JSONUtil.parseObj(resBody);
@@ -220,7 +220,7 @@ public class WeChatServiceImpl implements IWeChatService {
 
                 // 87014 表示包含违规内容（涉黄/暴恐/涉政等）
                 if (errcode != null && errcode == 87014) {
-                    log.warn("拦截到违规文本内容: {}", content);
+                    log.warn("远程拦截到违规文本内容: {}", content);
                     return false;
                 }
                 // 0 表示文本安全

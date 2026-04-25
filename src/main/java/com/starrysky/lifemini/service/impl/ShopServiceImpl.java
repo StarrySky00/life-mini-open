@@ -2,6 +2,7 @@ package com.starrysky.lifemini.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -28,15 +29,18 @@ import com.starrysky.lifemini.service.FileService;
 import com.starrysky.lifemini.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import io.qdrant.client.grpc.Points;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -724,7 +728,6 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     }
 
 
-
     // ******************** Tools/************************
 
     @Override
@@ -736,12 +739,16 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 .filterExpression("status == 1")
                 .build();
         List<Document> documents = qdrantVectorService.similaritySearch(request);
-        if(documents.isEmpty()){
+        if (documents.isEmpty()) {
             return "暂无语义相关的商铺或评价信息。";
         }
 
+        // 将文本和元数据中的 shop_id 拼接
         return documents.stream()
-                .map(Document::getText)
+                .map(doc -> {
+                    Object shopId = doc.getMetadata().get("shop_id");
+                    return doc.getText() + "（商铺ID：" + shopId + "）";
+                })
                 .collect(Collectors.joining("\n---\n"));
     }
 }
