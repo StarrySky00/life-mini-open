@@ -1,8 +1,5 @@
 package com.starrysky.lifemini.controller.user;
 
-import com.starrysky.lifemini.common.util.SensitiveWordUtil;
-import com.starrysky.lifemini.common.util.ThreadLocalUtil;
-import com.starrysky.lifemini.listener.GlobalDictManager;
 import com.starrysky.lifemini.model.entity.ChatMessage;
 import com.starrysky.lifemini.model.result.RecordResult;
 import com.starrysky.lifemini.model.result.Result;
@@ -11,16 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.formula.functions.T;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
-import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
-
-import java.util.Map;
 
 /**
  * @author StarrySky

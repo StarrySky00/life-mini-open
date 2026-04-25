@@ -71,6 +71,7 @@ public class RedisChatMemory implements ChatMemory {
                     stringRedisTemplate.expire(key, 2, TimeUnit.HOURS);
                     //发送消息，异步保存对话记录
                     eventPublisher.publishEvent(new ChatRecordEvent(conversationId, messages));
+                    log.debug("【add成功】");
                 } finally {
                     lock.unlock();
                 }
@@ -87,6 +88,7 @@ public class RedisChatMemory implements ChatMemory {
     @NotNull
     @Override
     public List<Message> get(@NotNull String conversationId) {
+        log.debug("【执行get】");
         return get(conversationId, 10);
     }
 
@@ -124,6 +126,7 @@ public class RedisChatMemory implements ChatMemory {
                     }
                 }).filter(Objects::nonNull)
                 .collect(Collectors.toList());
+        log.debug("【get结果】{}",list.size());
         return list;
     }
 
