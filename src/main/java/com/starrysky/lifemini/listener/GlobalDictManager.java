@@ -43,7 +43,7 @@ public class GlobalDictManager {
     }
 
     // 当管理员在后台修改了分类或关键词时，发个事件，这里监听到就重新加载一次
-    @EventListener       //TODO 添加发布事件
+    @EventListener
     public void onDictChange(DictChangeEvent event) {
         if ("category".equals(event.dictType())) {
             this.categoryDictContext = shopCategoryService.queryShopCategoryStr();

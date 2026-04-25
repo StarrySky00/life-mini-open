@@ -29,7 +29,7 @@ public class RedisCacheInitListener {
     private final EmailService emailService;
 
     // 监听 "应用准备就绪" 事件
-    @Async
+    @Async("eventExecutor")
     @EventListener(ApplicationReadyEvent.class)
     public void saveShopLocation() {
         try {

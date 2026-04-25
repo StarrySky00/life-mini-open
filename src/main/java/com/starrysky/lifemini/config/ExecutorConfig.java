@@ -18,8 +18,8 @@ public class ExecutorConfig {
     public Executor eventExecutor() {
         // 使用 Spring 的 ThreadPoolTaskExecutor
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
         executor.setQueueCapacity(500);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("event-pool-");

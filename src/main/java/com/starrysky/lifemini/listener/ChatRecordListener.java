@@ -25,10 +25,10 @@ public class ChatRecordListener {
     @Async("eventExecutor")
     @EventListener
     public void handleChatRecordEvent(ChatRecordEvent event) {
-        log.info("【异步落库】开始处理会话: {}", event.getConversationId());
+        log.info("【异步落库】开始处理会话: {}", event.conversationId());
         try {
-            Long conversationId = TypeConversionUtil.toLong(event.getConversationId());
-            List<Message> messages = event.getMessages();
+            Long conversationId = TypeConversionUtil.toLong(event.conversationId());
+            List<Message> messages = event.messages();
             if (CollUtil.isEmpty(messages)) {
                 return;
             }
@@ -47,7 +47,7 @@ public class ChatRecordListener {
             chatMessage.setCreateTime(LocalDateTime.now());
             chatMessageService.save(chatMessage);
         } catch (Exception e) {
-            log.error("【异步落库】严重失败！请检查数据库状态或数据格式,conversionId={}", event.getConversationId(), e);
+            log.error("【异步落库】严重失败！请检查数据库状态或数据格式,conversionId={}", event.conversationId(), e);
         }
     }
 }
