@@ -29,6 +29,7 @@ import com.starrysky.lifemini.service.FileService;
 import com.starrysky.lifemini.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import com.starrysky.lifemini.service.VectorService;
 import io.qdrant.client.grpc.Points;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -81,6 +82,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private final Executor cacheExecutor;
     private final Executor dbExecutor;
     private final VectorStore qdrantVectorService;
+    private final VectorService vectorService;
+    private final Executor vectorExecutor;
     @Resource
     @Lazy
     private IShopService shopService;
@@ -503,6 +506,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //1 保存商铺信息
         Shop shop = BeanUtil.copyProperties(dto, Shop.class);
         shop.setImageUrl(DataConstant.DEFAULT_SHOP_IMAGE);
+        shop.setStatus(StatusEnum.ENABLE.getId());
         save(shop);
         //2. 异步 同步缓存
         //2. 异步同步缓存
@@ -512,10 +516,22 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 SaveLocationInfo(dto.getLongitude(), dto.getLatitude(), shop.getId(), shop.getCategoryId());
                 //保存商店信息
                 ShopToRedis(shop);
+
             } catch (Exception e) {
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        //3. 保存向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                ShopCategory shopCategory = shopCategoryMapper.selectById(dto.getCategoryId());
+                vectorService.saveShopVector(shop, shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步保存向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
+
         return Result.success();
     }
 
@@ -554,6 +570,16 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        //3. 覆盖向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop, shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步覆盖向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -653,6 +679,17 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步移除商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        // 3. 修改向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                shop.setStatus(StatusEnum.DISABLE.getId());
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop,shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步修改向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -688,6 +725,17 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        // 3. 修改向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                shop.setStatus(StatusEnum.ENABLE.getId());
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop,shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步修改向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
