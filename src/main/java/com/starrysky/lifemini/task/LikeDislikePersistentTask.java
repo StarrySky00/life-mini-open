@@ -26,7 +26,7 @@ public class LikeDislikePersistentTask {
     /**
      * 每十分钟定时持久化赞和踩的总数量
      */
-    @Scheduled(cron = "0 0/3 * * * ?")
+    @Scheduled(cron = "0 0 0/1 * * ?")
     public void persistentLikeDislike() {
         log.info("开始持久化赞/踩总数量");
         int count = 0;
@@ -35,7 +35,7 @@ public class LikeDislikePersistentTask {
             String dirtyKey = CacheConstant.COMMENT + CacheConstant.COMMENT_DIRTY;
             List<String> dirtyCommentIds = stringRedisTemplate.opsForSet().pop(dirtyKey, 100);
             if (dirtyCommentIds == null || dirtyCommentIds.isEmpty()) {
-                log.info("无 需要持久化的赞/踩总数量");
+                log.debug("无 需要持久化的赞/踩总数量");
                 return;
             }
             log.info("本次持久化{}条数据:{}。。。", dirtyCommentIds.size(), dirtyCommentIds);
