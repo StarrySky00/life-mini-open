@@ -21,6 +21,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.service.IWeChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -127,6 +129,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
      * @param dto
      * @return
      */
+    //清空 缓存
+    @CacheEvict(cacheManager = CacheConstant.CAFFEINE_SHORT_CACHE_MANAGER,
+            cacheNames = CacheConstant.USER_PROFILE_CACHE
+    )
     @Override
     public Result updateUserInfo(UserDTO dto) {
         Long userId = ThreadLocalUtil.getUserId();
@@ -519,7 +525,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
 
     //查询用户偏好信息
-    //TODO 本地缓存用户信息
+    @Cacheable(cacheManager = CacheConstant.CAFFEINE_SHORT_CACHE_MANAGER,
+            cacheNames = CacheConstant.USER_PROFILE_CACHE
+    )
     @Override
     public String getUserProfile(Long userId) {
         if (userId == null) {
