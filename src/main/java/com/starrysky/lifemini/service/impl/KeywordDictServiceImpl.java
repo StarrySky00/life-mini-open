@@ -132,7 +132,6 @@ public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, Keywo
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
             cacheNames = CacheConstant.SIMPLE_KEYWORD
     )
-    //TODO 删除缓存功能
     public String queryKeywordsStr() {
         List<KeywordSimpleDTO> kws = querySimpleKeywordList();
         // 用{id,keyword}的格式返回给大模型看
