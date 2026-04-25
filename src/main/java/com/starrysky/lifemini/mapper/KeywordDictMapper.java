@@ -27,4 +27,6 @@ public interface KeywordDictMapper extends BaseMapper<KeywordDict> {
     List<KeywordSimpleDTO> queryKeywordSimpleList();
 
     List<CommentKeywordRelation> quertAllrelationInfo();
+
+    List<String> queryKeywordListByIds(@Param("keywords") List<Integer> keywords);
 }

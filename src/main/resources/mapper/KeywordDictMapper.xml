@@ -12,4 +12,12 @@
                             on tskr.keyword_id = tkd.id
 
     </select>
+    <select id="queryKeywordListByIds" resultType="java.lang.String">
+        select keyword
+        from tb_keyword_dict
+        where id in
+        <foreach item="item" collection="keywords" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </select>
 </mapper>

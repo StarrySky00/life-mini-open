@@ -14,6 +14,7 @@ import com.starrysky.lifemini.common.constant.FileConstant;
 import com.starrysky.lifemini.common.constant.MessageConstant;
 import com.starrysky.lifemini.common.enums.StatusEnum;
 import com.starrysky.lifemini.common.util.ImageUtils;
+import com.starrysky.lifemini.mapper.KeywordDictMapper;
 import com.starrysky.lifemini.mapper.ShopMapper;
 import com.starrysky.lifemini.mapper.UserMapper;
 import com.starrysky.lifemini.model.dto.AiCommentDTO;
@@ -22,18 +23,16 @@ import com.starrysky.lifemini.model.dto.PageQueryDTO;
 import com.starrysky.lifemini.model.dto.UserInfoDTO;
 import com.starrysky.lifemini.model.entity.Comment;
 import com.starrysky.lifemini.mapper.CommentMapper;
+import com.starrysky.lifemini.model.entity.Shop;
 import com.starrysky.lifemini.model.result.PageResult;
 import com.starrysky.lifemini.model.vo.CommentAdminVO;
 import com.starrysky.lifemini.model.vo.CommentVO;
 import com.starrysky.lifemini.model.result.Result;
-import com.starrysky.lifemini.service.FileService;
-import com.starrysky.lifemini.service.ICommentService;
+import com.starrysky.lifemini.service.*;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.common.util.SensitiveWordUtil;
 import com.starrysky.lifemini.common.util.ThreadLocalUtil;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
-import com.starrysky.lifemini.service.IUserService;
-import com.starrysky.lifemini.service.IWeChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.units.qual.A;
@@ -80,10 +79,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private final Executor cacheExecutor;
     private final IUserService userService;
     private final IWeChatService weChatService;
+    private final VectorService vectorService;
+    private final Executor vectorExecutor;
 
     @Autowired
     @Lazy
     private ICommentService commentService;
+    @Autowired
+    private KeywordDictMapper keywordDictMapper;
 
 
     /**
@@ -159,6 +162,16 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         //4.3 异步清除缓存
         Long shopId = comment.getShopId();
         syncCleanCommentCache(shopId);
+
+        // 5. 异步保存向量
+        CompletableFuture.runAsync(() -> {
+            Shop shop = shopMapper.selectById(shopId);
+            List<String> kws = null;
+            if (dto.getKeywords() != null) {
+                kws = keywordDictMapper.queryKeywordListByIds(dto.getKeywords());
+            }
+            vectorService.saveCommentVector(comment, shop.getShopName(), shop.getCategoryId(), kws);
+        }, vectorExecutor);
         return Result.success(comment.getId());
     }
 
@@ -190,10 +203,11 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         }
 
         //2. 隐藏评价或者取消隐藏
+        Integer hidden = comment.getHidden();
         commentMapper.update(
                 new LambdaUpdateWrapper<Comment>()
-                        .set(StatusEnum.ENABLE.getId().equals(comment.getHidden()), Comment::getHidden, StatusEnum.DISABLE.getId())
-                        .set(StatusEnum.DISABLE.getId().equals(comment.getHidden()), Comment::getHidden, StatusEnum.ENABLE.getId())
+                        .set(StatusEnum.ENABLE.getId().equals(hidden), Comment::getHidden, StatusEnum.DISABLE.getId())
+                        .set(StatusEnum.DISABLE.getId().equals(hidden), Comment::getHidden, StatusEnum.ENABLE.getId())
                         .eq(Comment::getId, id)
         );
         //3. 计算平均评分
@@ -202,6 +216,12 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         // key   commentCache:shopId:*（*：查询条件）     value
         Long shopId = comment.getShopId();
         syncCleanCommentCache(shopId);
+
+        // 4. 异步保存向量
+        CompletableFuture.runAsync(() -> {
+            Integer status = hidden.equals(StatusEnum.ENABLE.getId()) ? StatusEnum.DISABLE.getId() : StatusEnum.ENABLE.getId();
+            vectorService.updateCommentVectorStatus(comment.getId(), status);
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -490,6 +510,11 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         log.info("正在计算商店评分。。。");
         shopMapper.updateShopAvgScore(shopId);
         syncCleanCommentCache(shopId);
+
+        // 6. 异步保存向量
+        CompletableFuture.runAsync(() -> {
+            vectorService.updateCommentVectorStatus(commentId, StatusEnum.DISABLE.getId());
+        }, vectorExecutor);
         return Result.success();
     }
 
