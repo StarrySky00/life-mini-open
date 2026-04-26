@@ -87,7 +87,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             String oldAvatar = user.getAvatar();
             byte[] imageBytes = ImageUtils.compressImage(file);
             if (!weChatService.checkImage(imageBytes)) {
-                log.info("图片违规");
+                log.info("用户{}企图上传违规头像",userId);
+                banUserAndForcedOffline(userId);//上传违规图片，直接封禁
                 return Result.error(MessageConstant.IMAGE_VIOLATION);
             }
             String avatarUrl = fileService.uploadFile(imageBytes, FileConstant.USER, file.getOriginalFilename());
@@ -538,7 +539,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return "用户口味偏好：无";
         }
         String preferences = user.getPreferences();
-        if (preferences.isBlank()) {
+        if (preferences==null || preferences.isBlank()) {
             return "用户口味偏好：无";
         }
         // 返回给大模型看

@@ -11,12 +11,14 @@ public class DataConstant {
     /**
      * 默认用户头像
      */
-    public static final String DEFAULT_USER_AVATAR = "http://192.168.150.101/lifemini/user/ff1d44a3-1cc9-4e88-82b4-33c18f5dec02.jpg";
+    //public static final String DEFAULT_USER_AVATAR = "http://192.168.150.101/lifemini/user/ff1d44a3-1cc9-4e88-82b4-33c18f5dec02.jpg";
+    public static final String DEFAULT_USER_AVATAR = "http://101.43.53.65/lifemini/user/ff1d44a3-1cc9-4e88-82b4-33c18f5dec02.jpg";
 
     /**
      * 默认商店封面
      */
-    public static final String DEFAULT_SHOP_IMAGE = "http://192.168.150.101/lifemini/category/573fd6c3-b7b7-4894-b322-fe538e1bdbc0.png";
+    //public static final String DEFAULT_SHOP_IMAGE = "http://192.168.150.101/lifemini/category/573fd6c3-b7b7-4894-b322-fe538e1bdbc0.png";
+    public static final String DEFAULT_SHOP_IMAGE = "http://101.43.53.65/lifemini/shop/65968b54-007d-4cec-8c7c-087f69267a82.png";
 
     /**
      * 默认昵称前缀

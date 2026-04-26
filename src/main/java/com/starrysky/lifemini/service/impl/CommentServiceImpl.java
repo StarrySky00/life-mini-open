@@ -35,6 +35,7 @@ import com.starrysky.lifemini.common.util.ThreadLocalUtil;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.formula.functions.T;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,7 +102,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             log.info("上传评价图片");
             byte[] imageBytes = ImageUtils.compressImage(photo);
             if (!weChatService.checkImage(imageBytes)) {
-                log.info("图片违规");
+                Long userId = ThreadLocalUtil.getUserId();
+                log.info("用户{}企图上传违规评价图片",userId);
+                userService.banUserAndForcedOffline(userId);//上传违规图片，直接封禁
                 return Result.error(MessageConstant.IMAGE_VIOLATION);
             }
             String url = fileService.uploadFile(imageBytes, FileConstant.COMMENT, photo.getOriginalFilename(), true, 1);
@@ -132,9 +135,25 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             log.error("未获取到用户id");
             return Result.error(MessageConstant.TAKE_USER_INFO_FAILED);
         }
+
         //2. 验证评论内容是否正常
+        Long limit = stringRedisTemplate.opsForValue().increment("check:comment:" + userId);
+        if (limit != null && limit == 1) {
+            stringRedisTemplate.expire("check:comment:" + userId, 24, TimeUnit.HOURS);
+        }
+        if (limit != null && limit > 15) {
+            return Result.error("每日评价数达到上限");
+        }
         if (!weChatService.checkContent(dto.getContent())) {
-            return Result.error("评论内容违规！评论失败");
+            Long illegalTimes = stringRedisTemplate.opsForValue().increment("check:illegal:comment" + userId);
+            if (illegalTimes != null && illegalTimes == 1) {
+                stringRedisTemplate.expire("check:illegal:comment" + userId, 7, TimeUnit.DAYS);
+            }
+            if (illegalTimes != null && illegalTimes > 3) {
+                log.debug("用户{}一周内多次发布违规评价，已封禁",userId);
+                userService.banUserAndForcedOffline(userId);
+            }
+            return Result.error("评论内容违规！评论失败,一周内多次违规将封号");
         }
 
         //3. 判断图片是否过期
@@ -563,16 +582,21 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     /**
      * 帮助用户写评价
+     *
      * @param dto
      * @return
      */
     @Override
     public String helpWriteComment(AiCommentDTO dto) {
         CommentDTO commentDTO = BeanUtil.copyProperties(dto, CommentDTO.class);
-        Result<Long> result = commentService.addComment(commentDTO);
-        if (!result.getCode().equals(200)) {
-            return "写评价失败了，可能是商店id不存在，或者评价内容不合法等原因导致的哦，请告知用户检查一下输入的内容，或者稍后再试试吧！";
+        try {
+            Result<Long> result = commentService.addComment(commentDTO);
+            if (!result.getCode().equals(200)) {
+                return "写评价失败了，可能是商店id不存在，或者评价内容不合法等原因导致的哦，请告知用户检查一下输入的内容，或者稍后再试试吧！";
+            }
+            return "评价发布成功";
+        } catch (Exception e) {
+            return "写评价失败了,请告知用户检查一下输入的内容，或者稍后再试试吧！";
         }
-        return "评价发布成功";
     }
 }
