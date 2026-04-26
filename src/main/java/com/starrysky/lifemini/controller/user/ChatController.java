@@ -1,5 +1,6 @@
 package com.starrysky.lifemini.controller.user;
 
+import com.starrysky.lifemini.model.dto.LocationDTO;
 import com.starrysky.lifemini.model.entity.ChatMessage;
 import com.starrysky.lifemini.model.result.RecordResult;
 import com.starrysky.lifemini.model.result.Result;
@@ -40,11 +41,12 @@ public class ChatController {
         return chatService.chat(content, lon, lat);
     }
 
-    @GetMapping("/location")
-    @Operation(summary = "刷新用户位置坐标（进入对话界面时主动获取一次）用户坐标都默认为（112.5,33.0）")
-    public Result<Void> takeUserLocation(@RequestParam(name = "用户经度") Double longitude,
-                                         @RequestParam(name = "用户纬度") Double latitude) {
-        return chatService.saveUserLocation(longitude, latitude);
+    // 2. 修改 Controller
+    @PostMapping("/location")
+    @Operation(summary = "刷新用户位置坐标")
+    public Result<Void> takeUserLocation(@RequestBody LocationDTO locationDTO) {
+        // 通过 dto 获取参数
+        return chatService.saveUserLocation(locationDTO.getLongitude(), locationDTO.getLatitude());
     }
 
     @GetMapping("/record")
