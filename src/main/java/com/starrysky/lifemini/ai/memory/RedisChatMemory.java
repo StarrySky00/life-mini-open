@@ -6,7 +6,9 @@ import com.starrysky.lifemini.common.constant.CacheConstant;
 import com.starrysky.lifemini.common.util.ThreadLocalUtil;
 import com.starrysky.lifemini.model.event.ChatRecordEvent;
 import com.starrysky.lifemini.model.vo.MessageVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -22,26 +24,31 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * @author StarrySky
+ */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class RedisChatMemory implements ChatMemory {
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private Redisson redisson;
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
-    private static final String memoryPrefix = "chat:memory:";
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
+    private final Redisson redisson;
+    private final ApplicationEventPublisher eventPublisher;
+    private static final String MEMORY_PREFIX = "chat:memory:";
     private static final int MAX_LENGTH = 10;
     private static final int MAX_LIMIT = 20;
 
+    @Override
+    public void add(@NotNull String conversationId, @NotNull Message message) {
+        add(conversationId, List.of(message));
+    }
+
     //新增对话记录
     @Override
-    public void add(String conversationId, List<Message> messages) {
-        log.info("【执行add】");
-        String key = memoryPrefix + conversationId;
+    public void add(@NotNull String conversationId, List<Message> messages) {
+        log.debug("【执行add】{}",messages.size());
+        String key = MEMORY_PREFIX + conversationId;
         //把对话从右侧存入redisList（12小时过期）
         List<String> vosJson = messages.stream()
                 .filter(m -> m.getMessageType() != MessageType.SYSTEM)
@@ -53,9 +60,6 @@ public class RedisChatMemory implements ChatMemory {
                     }
                 }).filter(Objects::nonNull)
                 .toList();
-        log.info("******************add内容*****************");
-        log.info("add:" + vosJson);
-        log.info("******************************************");
         RLock lock = redisson.getLock(CacheConstant.CHAT_LOCK_PRX + conversationId);
         try {
             boolean isLock = lock.tryLock(5, 10, TimeUnit.SECONDS);
@@ -64,9 +68,10 @@ public class RedisChatMemory implements ChatMemory {
                 try {
                     stringRedisTemplate.opsForList().rightPushAll(key, vosJson);
                     stringRedisTemplate.opsForList().trim(key, -MAX_LIMIT, -1);
-                    stringRedisTemplate.expire(key, 12, TimeUnit.HOURS);
+                    stringRedisTemplate.expire(key, 2, TimeUnit.HOURS);
                     //发送消息，异步保存对话记录
-                    eventPublisher.publishEvent(new ChatRecordEvent(this, conversationId, messages));
+                    eventPublisher.publishEvent(new ChatRecordEvent(conversationId, messages));
+                    log.debug("【add成功】");
                 } finally {
                     lock.unlock();
                 }
@@ -80,12 +85,18 @@ public class RedisChatMemory implements ChatMemory {
         }
     }
 
-    //获取对话记录
+    @NotNull
     @Override
+    public List<Message> get(@NotNull String conversationId) {
+        log.debug("【执行get】");
+        return get(conversationId, 10);
+    }
+
+    //获取对话记录
+
     public List<Message> get(String conversationId, int lastN) {
-        log.info("【执行get】");
         int limit = Math.min(MAX_LENGTH, lastN);
-        String key = memoryPrefix + conversationId;
+        String key = MEMORY_PREFIX + conversationId;
         //从右侧取出最新的对话记录(最多十条
         List<String> vosJson = stringRedisTemplate.opsForList().range(key, -limit, -1);
         if (vosJson == null) {
@@ -103,7 +114,10 @@ public class RedisChatMemory implements ChatMemory {
                                         vo.getToolName(),
                                         vo.getText()
                                 );
-                                yield new ToolResponseMessage(List.of(response), Collections.emptyMap());
+                                yield ToolResponseMessage.builder()
+                                        .responses(List.of(response))
+                                        .metadata(Collections.emptyMap())
+                                        .build();
                             }
                             default -> new UserMessage(vo.getText());
                         };
@@ -112,17 +126,15 @@ public class RedisChatMemory implements ChatMemory {
                     }
                 }).filter(Objects::nonNull)
                 .collect(Collectors.toList());
-        log.info("******************get结果*****************");
-        log.info("get:" + list);
-        log.info("******************************************");
+        log.debug("【get结果】{}",list.size());
         return list;
     }
 
     //清除对话记录
     @Override
-    public void clear(String conversationId) {
+    public void clear(@NotNull String conversationId) {
         log.info("【执行clear】");
-        String key = memoryPrefix + conversationId;
+        String key = MEMORY_PREFIX + conversationId;
         stringRedisTemplate.delete(key);
     }
 }

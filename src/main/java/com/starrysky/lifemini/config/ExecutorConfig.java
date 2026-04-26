@@ -18,8 +18,8 @@ public class ExecutorConfig {
     public Executor eventExecutor() {
         // 使用 Spring 的 ThreadPoolTaskExecutor
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
         executor.setQueueCapacity(500);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("event-pool-");
@@ -59,6 +59,19 @@ public class ExecutorConfig {
         executor.setQueueCapacity(50);//队列长度
         executor.setKeepAliveSeconds(120);//线程存活时间
         executor.setThreadNamePrefix("db-pool-");//线程名称前缀
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());//拒绝策略
+        executor.setWaitForTasksToCompleteOnShutdown(true);//关机时等待任务完成
+        executor.initialize();
+        return executor;
+    }
+    @Bean("vectorExecutor")
+    public Executor vectorExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(8);//核心线程数
+        executor.setMaxPoolSize(16);//最大线程数
+        executor.setQueueCapacity(50);//队列长度
+        executor.setKeepAliveSeconds(120);//线程存活时间
+        executor.setThreadNamePrefix("vector-pool-");//线程名称前缀
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());//拒绝策略
         executor.setWaitForTasksToCompleteOnShutdown(true);//关机时等待任务完成
         executor.initialize();

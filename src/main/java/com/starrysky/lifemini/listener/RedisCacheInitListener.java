@@ -12,6 +12,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.geo.Point;
 import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public class RedisCacheInitListener {
     private final EmailService emailService;
 
     // 监听 "应用准备就绪" 事件
+    @Async("eventExecutor")
     @EventListener(ApplicationReadyEvent.class)
     public void saveShopLocation() {
         try {

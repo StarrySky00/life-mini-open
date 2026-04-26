@@ -2,6 +2,7 @@ package com.starrysky.lifemini.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -28,12 +29,19 @@ import com.starrysky.lifemini.service.FileService;
 import com.starrysky.lifemini.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import com.starrysky.lifemini.service.VectorService;
+import io.qdrant.client.grpc.Points;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -73,6 +81,9 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private final ShopCategoryMapper shopCategoryMapper;
     private final Executor cacheExecutor;
     private final Executor dbExecutor;
+    private final VectorStore qdrantVectorService;
+    private final VectorService vectorService;
+    private final Executor vectorExecutor;
     @Resource
     @Lazy
     private IShopService shopService;
@@ -495,6 +506,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //1 保存商铺信息
         Shop shop = BeanUtil.copyProperties(dto, Shop.class);
         shop.setImageUrl(DataConstant.DEFAULT_SHOP_IMAGE);
+        shop.setStatus(StatusEnum.ENABLE.getId());
         save(shop);
         //2. 异步 同步缓存
         //2. 异步同步缓存
@@ -504,10 +516,22 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 SaveLocationInfo(dto.getLongitude(), dto.getLatitude(), shop.getId(), shop.getCategoryId());
                 //保存商店信息
                 ShopToRedis(shop);
+
             } catch (Exception e) {
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        //3. 保存向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                ShopCategory shopCategory = shopCategoryMapper.selectById(dto.getCategoryId());
+                vectorService.saveShopVector(shop, shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步保存向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
+
         return Result.success();
     }
 
@@ -546,6 +570,16 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        //3. 覆盖向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop, shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步覆盖向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -645,6 +679,17 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步移除商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        // 3. 修改向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                shop.setStatus(StatusEnum.DISABLE.getId());
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop,shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步修改向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -680,6 +725,17 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 log.error("异步同步商店缓存失败：{}", shop.getId(), e);
             }
         }, cacheExecutor);
+        // 3. 修改向量
+        CompletableFuture.runAsync(() -> {
+            log.debug("【保存商店向量】");
+            try {
+                shop.setStatus(StatusEnum.ENABLE.getId());
+                ShopCategory shopCategory = shopCategoryMapper.selectById(shop.getCategoryId());
+                vectorService.saveShopVector(shop,shopCategory.getCategoryName());
+            } catch (Exception e) {
+                log.error("异步修改向量失败：{}", shop.getId(), e);
+            }
+        }, vectorExecutor);
         return Result.success();
     }
 
@@ -717,5 +773,30 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             count = shopMapper.selectCount(new LambdaQueryWrapper<Shop>().eq(Shop::getStatus, status));
         }
         return Result.success(count);
+    }
+
+
+    // ******************** Tools/************************
+
+    @Override
+    public String queryBackInfo(String content) {
+        SearchRequest request = SearchRequest.builder()
+                .query(content)
+                .topK(5)
+                .similarityThreshold(0.55d)
+                .filterExpression("status == 1")
+                .build();
+        List<Document> documents = qdrantVectorService.similaritySearch(request);
+        if (documents.isEmpty()) {
+            return "暂无语义相关的商铺或评价信息。";
+        }
+
+        // 将文本和元数据中的 shop_id 拼接
+        return documents.stream()
+                .map(doc -> {
+                    Object shopId = doc.getMetadata().get("shop_id");
+                    return doc.getText() + "（商铺ID：" + shopId + "）";
+                })
+                .collect(Collectors.joining("\n---\n"));
     }
 }

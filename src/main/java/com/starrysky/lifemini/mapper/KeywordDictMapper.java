@@ -1,5 +1,6 @@
 package com.starrysky.lifemini.mapper;
 
+import com.starrysky.lifemini.model.dto.CommentKeywordRelation;
 import com.starrysky.lifemini.model.dto.KeywordSimpleDTO;
 import com.starrysky.lifemini.model.entity.KeywordDict;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -24,4 +25,8 @@ public interface KeywordDictMapper extends BaseMapper<KeywordDict> {
 
     @Select("select id,keyword from tb_keyword_dict order by id")
     List<KeywordSimpleDTO> queryKeywordSimpleList();
+
+    List<CommentKeywordRelation> quertAllrelationInfo();
+
+    List<String> queryKeywordListByIds(@Param("keywords") List<Integer> keywords);
 }

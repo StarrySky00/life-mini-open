@@ -1,17 +1,9 @@
 package com.starrysky.lifemini.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import com.alibaba.nacos.common.model.RestResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.injector.methods.Insert;
 import com.starrysky.lifemini.common.constant.*;
 import com.starrysky.lifemini.common.util.*;
 import com.starrysky.lifemini.model.vo.UserAdminVO;
@@ -29,23 +21,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.starrysky.lifemini.service.IWeChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -103,7 +87,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             String oldAvatar = user.getAvatar();
             byte[] imageBytes = ImageUtils.compressImage(file);
             if (!weChatService.checkImage(imageBytes)) {
-                log.info("图片违规");
+                log.info("用户{}企图上传违规头像",userId);
+                banUserAndForcedOffline(userId);//上传违规图片，直接封禁
                 return Result.error(MessageConstant.IMAGE_VIOLATION);
             }
             String avatarUrl = fileService.uploadFile(imageBytes, FileConstant.USER, file.getOriginalFilename());
@@ -145,6 +130,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
      * @param dto
      * @return
      */
+    //清空 缓存
+    @CacheEvict(cacheManager = CacheConstant.CAFFEINE_SHORT_CACHE_MANAGER,
+            cacheNames = CacheConstant.USER_PROFILE_CACHE
+    )
     @Override
     public Result updateUserInfo(UserDTO dto) {
         Long userId = ThreadLocalUtil.getUserId();
@@ -533,5 +522,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     public void banUserAndForcedOffline(Long userId) {
         Boolean offLine = stringRedisTemplate.delete(CacheConstant.TOKEN + userId);
         disableUserById(userId);
+    }
+
+
+    //查询用户偏好信息
+    @Cacheable(cacheManager = CacheConstant.CAFFEINE_SHORT_CACHE_MANAGER,
+            cacheNames = CacheConstant.USER_PROFILE_CACHE
+    )
+    @Override
+    public String getUserProfile(Long userId) {
+        if (userId == null) {
+            return "用户口味偏好：无";
+        }
+        User user = getById(userId);
+        if (user == null) {
+            return "用户口味偏好：无";
+        }
+        String preferences = user.getPreferences();
+        if (preferences==null || preferences.isBlank()) {
+            return "用户口味偏好：无";
+        }
+        // 返回给大模型看
+        return "用户口味偏好：" + preferences;
+    }
+
+    //查询用户当前位置
+    @Override
+    public String getUserLocation(Long userId) {
+        if (userId == null) {
+            return "用户当前位置：无";
+        }
+
+        User user = getById(userId);
+        if (user == null) {
+            return "用户当前位置：无";
+        }
+        String locationStr = "当前用户坐标{longitude = 112.5 , latitude = 33.0}";
+        String key = CacheConstant.USER_LOCATION + userId;
+        List<Object> objects = stringRedisTemplate.opsForHash().multiGet(key, DataConstant.LOCATION);//x,y
+        if (objects.size() >= 2 && objects.get(0) != null && objects.get(1) != null) {
+            locationStr = "当前用户坐标{longitude = " + TypeConversionUtil.ToDouble(objects.get(0)) + " , latitude = " + TypeConversionUtil.ToDouble(objects.get(1)) + "}";
+        }
+        log.debug("当前用户的距离信息为：{}", locationStr);
+        // 获取用户当前位置
+        return "用户当前位置：" + locationStr;
     }
 }

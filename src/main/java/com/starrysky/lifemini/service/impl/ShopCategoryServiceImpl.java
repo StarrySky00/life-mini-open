@@ -14,6 +14,7 @@ import com.starrysky.lifemini.model.dto.ShopCategorySimpleDTO;
 import com.starrysky.lifemini.model.entity.Shop;
 import com.starrysky.lifemini.model.entity.ShopCategory;
 import com.starrysky.lifemini.mapper.ShopCategoryMapper;
+import com.starrysky.lifemini.model.event.DictChangeEvent;
 import com.starrysky.lifemini.model.vo.ShopCategoryVO;
 import com.starrysky.lifemini.model.result.Result;
 import com.starrysky.lifemini.service.FileService;
@@ -22,8 +23,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +54,7 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
     private final ShopMapper shopMapper;
     private final FileService fileService;
     private final Executor dbExecutor;
+    private final ApplicationEventPublisher eventPublisher;
 
     //查询商店所有分类
     @Override
@@ -120,11 +126,17 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
 
     //新增商店分类
     @Override
-    @CacheEvict(//清空缓存
-            cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SHOP_CATEGORY_NAME_CACHE,
-            allEntries = true
-    )
+    @Caching(evict = {
+            @CacheEvict(//清空缓存
+                    cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+                    cacheNames = CacheConstant.SHOP_CATEGORY_NAME_CACHE,
+                    allEntries = true
+            ),
+            @CacheEvict(
+                    cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+                    cacheNames = CacheConstant.SIMPLE_CATEGORY
+            )
+    })
     public Result addShopCategory(ShopCategoryDTO shopCategoryDTO) {
         log.debug("新增商店分类");
         String icon = shopCategoryDTO.getIcon();
@@ -137,19 +149,25 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
         }
         ShopCategory shopCategory = BeanUtil.copyProperties(shopCategoryDTO, ShopCategory.class);
         save(shopCategory);
+        eventPublisher.publishEvent(new DictChangeEvent("category"));// 发布事件,加载字典字符串到JVM
         return Result.success();
     }
 
     //删除指定商店分类
     @Override
-    @CacheEvict(//清空缓存
-            cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SHOP_CATEGORY_NAME_CACHE,
-            allEntries = true
-    )
+    @Caching(evict = {
+            @CacheEvict(//清空缓存
+                    cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+                    cacheNames = CacheConstant.SHOP_CATEGORY_NAME_CACHE,
+                    allEntries = true
+            ),
+            @CacheEvict(
+                    cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+                    cacheNames = CacheConstant.SIMPLE_CATEGORY
+            )
+    })
     public Result deleteShopCategory(Long categoryId) {
         log.debug("删除指定商品分类");
-        // TODO  删除指定商品分类
         Long count = shopMapper.selectCount(new LambdaQueryWrapper<Shop>().eq(Shop::getCategoryId, categoryId));
         if (count != null && !count.equals(0L)) {
             return Result.error(MessageConstant.CAN_NOT_DELETE_USED_CATEGORY);
@@ -165,6 +183,7 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
             log.info("删除分类图片");
             fileService.deleteFile(url);
         }
+        eventPublisher.publishEvent(new DictChangeEvent("category"));// 发布事件,加载字典字符串到JVM
         return Result.success();
     }
 
@@ -185,10 +204,27 @@ public class ShopCategoryServiceImpl extends ServiceImpl<ShopCategoryMapper, Sho
      * @return
      */
     @Override
-    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SIMPLE_CATEGORY)
     public List<ShopCategorySimpleDTO> queryShopCategorySimpleList() {
         List<ShopCategorySimpleDTO> list = shopCategoryMapper.queryShopCategorySimpleList();
         return list;
+    }
+
+    /**
+     * 查询商店分类字符串（逗号分隔）
+     *
+     * @return
+     */
+    @Override
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+            cacheNames = CacheConstant.SIMPLE_CATEGORY)
+    public String queryShopCategoryStr() {
+        List<ShopCategorySimpleDTO> scs = queryShopCategorySimpleList();
+        // 用{id,keyword}的格式返回给大模型看
+        StringBuilder sb = new StringBuilder("分类列表格式{categoryId：category},列表为：");
+        for (ShopCategorySimpleDTO sc : scs) {
+            sb.append("{").append(+sc.getId()).append("：").append(sc.getCategoryName()).append("},");
+        }
+        sb.replace(sb.length() - 1, sb.length(), "。");//去掉最后一个逗号
+        return sb.toString();
     }
 }

@@ -8,6 +8,7 @@ import com.starrysky.lifemini.common.constant.DataConstant;
 import com.starrysky.lifemini.common.constant.MessageConstant;
 import com.starrysky.lifemini.common.util.ThreadLocalUtil;
 import com.starrysky.lifemini.common.util.TypeConversionUtil;
+import com.starrysky.lifemini.listener.GlobalDictManager;
 import com.starrysky.lifemini.mapper.ChatMessageMapper;
 import com.starrysky.lifemini.model.dto.KeywordSimpleDTO;
 import com.starrysky.lifemini.model.dto.ShopCategorySimpleDTO;
@@ -24,6 +25,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -32,48 +34,89 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author StarrySky
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ChatServiceImpl implements ChatService {
-    private final IShopCategoryService shopCategoryService;
-    private final IKeywordDictService keywordDictService;
-    private final ChatClient chatClient;
     private final IWeChatService weChatService;
     private final ChatMessageMapper chatMessageMapper;
     private final StringRedisTemplate stringRedisTemplate;
-    private final Executor cacheExecutor;
     private final IUserService userService;
+    private final GlobalDictManager globalDictManager;
+    private final ChatClient serviceChatClient;
+
 
     @Override
-    public Flux<String> searchShops(String content, Long userId) {
+    public Flux<String> chat(String content, Double lon, Double lat) {
+        log.info("对话测试");
+        Long userId = ThreadLocalUtil.getUserId();
+        return chatCheck(content, userId)
+                .flux()
+                .switchIfEmpty(Flux.defer(() -> {
+                    // 1. 获取半静态的Context数据
+                    String userProfile = userService.getUserProfile(userId);
+                    String keywordDict = globalDictManager.getKeywordDict();
+                    String categoryDict = globalDictManager.getCategoryDict();
+                    String locationStr = lon == null || lat == null ? "未知" : String.format("longitude=%f，latitude%f", lon, lat);
+                    String systemPrompt = String.format(DataConstant.SYSTEM_PROMPT,
+                            userProfile, locationStr, categoryDict, keywordDict);
+
+                    return serviceChatClient
+                            .prompt()
+                            .system(systemPrompt)
+                            .user(content)
+                            .toolContext(Map.of("userId", userId))
+                            .advisors(a -> a.param("chat_memory_conversation_id", userId))
+                            .stream()
+                            .content();
+                }));
+    }
+
+    private Mono<String> chatCheck(String content, Long userId) {
+        //1. 检查用户是否登录
         if (userId == null) {
-            return Flux.just("请先登录！");
+            return Mono.just("请先登录！");
         }
-        //检查用户当日语言违规次数是否到达上限
-        String dataAndId = LocalDate.now().format(DateTimeFormatter.ofPattern(DataConstant.DATE_FORMAT)) + ":" + userId;
-        if (!weChatService.checkContent(content)) {
-            log.error("用户：【{}】  语言【{}】违规", userId, content);
-            String warnKey = CacheConstant.CHAT_WARN_PRX + dataAndId;
-            Long warnCount = stringRedisTemplate.opsForValue().increment(warnKey);
-            stringRedisTemplate.expire(warnKey, 24, TimeUnit.HOURS);
-            if (warnCount != null && warnCount > 3) {
-                log.info("禁用用户{},强制下线", userId);
-                //禁用当前用户，删除token强制下线
-                userService.banUserAndForcedOffline(userId);
-                return Flux.just("语言多次违规，账号已被封禁");
+        //2. 检查输入内容长度
+        if (content.length() > 160) {
+            return Mono.just("输入内容过长，请精简至150字以内！");
+        }
+
+        return Mono.defer(() -> {
+            //3. 检查输入内容是否违规 并 记录违规次数 如果违规次数过多则封禁账号
+            String dataAndId = LocalDate.now().format(DateTimeFormatter.ofPattern(DataConstant.DATE_FORMAT)) + ":" + userId;
+            if (!weChatService.checkContent(content)) {
+                log.error("用户：【{}】  语言【{}】违规", userId, content);
+                String warnKey = CacheConstant.CHAT_WARN_PRX + dataAndId;
+                Long warnCount = stringRedisTemplate.opsForValue().increment(warnKey);
+                if (warnCount != null && warnCount == 1) {
+                    stringRedisTemplate.expire(warnKey, 24, TimeUnit.HOURS);
+                }
+                if (warnCount != null && warnCount > 5) {
+                    log.info("禁用用户{},强制下线", userId);
+                    //禁用当前用户，删除token强制下线
+                    userService.banUserAndForcedOffline(userId);
+                    return Mono.just("语言多次违规，账号已被封禁");
+                }
+                return Mono.just("请文明用语！（违规多次将会被封禁账号哦）");
             }
-            return Flux.just("请文明用语！");
-        }
-        //检查用户对话次数是否达到上限
-        String limitKey = CacheConstant.CHAT_Limit_PRX + dataAndId;
-        Long limit = stringRedisTemplate.opsForValue().increment(limitKey);
-        stringRedisTemplate.expire(limitKey, 24, TimeUnit.HOURS);
-        if (limit != null && limit > 20) {
-            log.info("用户{}对话达到限制次数", userId);
-            return Flux.just("今日可回复次数达到限制!");
-        }
-        log.info("【动态拼接systemPrompt】");
+
+            //4. 检查用户对话次数是否达到上限
+            String limitKey = CacheConstant.CHAT_Limit_PRX + dataAndId;
+            Long limit = stringRedisTemplate.opsForValue().increment(limitKey);
+            stringRedisTemplate.expire(limitKey, 24, TimeUnit.HOURS);
+            if (limit != null && limit > 30) {
+                log.info("用户{}对话达到限制次数", userId);
+                return Mono.just("今日可回复次数达到限制!");
+            }
+            // 检查全部通过，返回空流
+            return Mono.empty();
+        }).subscribeOn(Schedulers.boundedElastic()); // defer里面的阻塞代码去单独的I/O线程池跑，别卡主线程！
+
+        /*log.info("【动态拼接systemPrompt】");
         CompletableFuture<List<ShopCategorySimpleDTO>> cateList = CompletableFuture.supplyAsync(shopCategoryService::queryShopCategorySimpleList, cacheExecutor);
         CompletableFuture<List<KeywordSimpleDTO>> keywordList = CompletableFuture.supplyAsync(keywordDictService::querySimpleKeywordList, cacheExecutor);
         CompletableFuture<List<Object>> location = CompletableFuture.supplyAsync(() -> {
@@ -105,6 +148,7 @@ public class ChatServiceImpl implements ChatService {
                     loc.get(0),
                     loc.get(1)
             );
+
             log.info("【ai开始执行】");
             return chatClient.prompt()
                     .system(systemPrompt)
@@ -115,6 +159,8 @@ public class ChatServiceImpl implements ChatService {
                     .stream()
                     .content();
         });
+
+        */
     }
 
     /**
@@ -169,7 +215,7 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Result saveUserLocation(Double longitude, Double latitude) {
-        log.info("保存用户坐标信息");
+        log.debug("保存用户坐标信息");
         Long userId = ThreadLocalUtil.getUserId();
         if (userId == null) {
             return Result.error(401, MessageConstant.USER + MessageConstant.NOT_LOGIN);

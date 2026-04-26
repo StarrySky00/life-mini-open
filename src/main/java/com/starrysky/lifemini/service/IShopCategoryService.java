@@ -45,4 +45,10 @@ public interface IShopCategoryService extends IService<ShopCategory> {
 
     //查询分类的简单信息
     List<ShopCategorySimpleDTO> queryShopCategorySimpleList();
+
+    /**
+     * 查询分类列表 字符串
+     * @return
+     */
+    String queryShopCategoryStr();
 }

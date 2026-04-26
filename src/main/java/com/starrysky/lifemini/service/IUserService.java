@@ -70,4 +70,18 @@ public interface IUserService extends IService<User> {
     Result<UserVO> getUserById(Long userId);
 
     void banUserAndForcedOffline(Long userId);
+
+ /**用户偏好信息
+  * 查询
+  * @param userId
+  * @return
+  */
+ String getUserProfile(Long userId);
+
+ /**
+  * 查询用户坐标信息
+  * @param userId
+  * @return
+  */
+ String getUserLocation(Long userId);
 }

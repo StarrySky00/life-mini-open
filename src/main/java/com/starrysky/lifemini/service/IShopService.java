@@ -58,4 +58,11 @@ public interface IShopService extends IService<Shop> {
 
     //根据分类分页查询商店
     List<ShopVO> queryShopByCategory(ShopPageQueryDTO dto);
+
+    /**
+     * 查询商店，评价等的上下文信息，供AI生成回复使用
+     * @param content
+     * @return
+     */
+    String queryBackInfo(String content);
 }

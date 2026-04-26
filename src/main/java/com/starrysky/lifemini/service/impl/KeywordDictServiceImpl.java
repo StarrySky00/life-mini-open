@@ -10,11 +10,13 @@ import com.starrysky.lifemini.mapper.KeywordDictMapper;
 import com.starrysky.lifemini.model.result.Result;
 import com.starrysky.lifemini.service.IKeywordDictService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +32,11 @@ import java.util.List;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, KeywordDict> implements IKeywordDictService {
-    @Autowired
-    private ShopMapper shopMapper;
-    @Autowired
-    private KeywordDictMapper keywordDictMapper;
+
+    private final ShopMapper shopMapper;
+    private final KeywordDictMapper keywordDictMapper;
 
     /**
      * 查询keyword列表
@@ -115,12 +117,29 @@ public class KeywordDictServiceImpl extends ServiceImpl<KeywordDictMapper, Keywo
      *
      * @return
      */
-    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
-            cacheNames = CacheConstant.SIMPLE_KEYWORD
-    )
     @Override
     public List<KeywordSimpleDTO> querySimpleKeywordList() {
         List<KeywordSimpleDTO> list = keywordDictMapper.queryKeywordSimpleList();
         return list;
+    }
+
+    /**
+     * 查询keyword列表
+     *
+     * @return
+     */
+    @Override
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MANAGER,
+            cacheNames = CacheConstant.SIMPLE_KEYWORD
+    )
+    public String queryKeywordsStr() {
+        List<KeywordSimpleDTO> kws = querySimpleKeywordList();
+        // 用{id,keyword}的格式返回给大模型看
+        StringBuilder sb = new StringBuilder("关键词列表格式{keywordId：keyword},列表为：");
+        for (KeywordSimpleDTO kw : kws) {
+            sb.append("{").append(+kw.getId()).append("：").append(kw.getKeyword()).append("},");
+        }
+        sb.replace(sb.length() - 1, sb.length(), "。");//去掉最后一个逗号
+        return sb.toString();
     }
 }

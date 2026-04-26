@@ -50,8 +50,24 @@ public class CacheConfig {
         cacheManager.setCaffeine(Caffeine.newBuilder()
             .initialCapacity(50)           // 初始容量
             .maximumSize(1000)             // 最大缓存项数（防内存溢出）
-            .expireAfterWrite(12, TimeUnit.HOURS)   // 写入后分钟过期
+            .expireAfterWrite(12, TimeUnit.HOURS)   // 写入12小时后过期
             .recordStats()                 // 开启统计（用于监控命中率等）
+        );
+        return cacheManager;
+    }
+    /**
+     * 定义一个caffeineShortCacheManager的本地缓存管理器
+     */
+    @Bean(CacheConstant.CAFFEINE_SHORT_CACHE_MANAGER)
+    //其中一个设置为默认，否则两个都不是默认的，服务启动失败
+    public CacheManager caffeineShortCacheManager() {
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+        // 配置 Caffeine 缓存策略
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .initialCapacity(50)           // 初始容量
+                .maximumSize(1000)             // 最大缓存项数（防内存溢出）
+                .expireAfterWrite(20, TimeUnit.MINUTES)   // 写入20分钟过期
+                .recordStats()                 // 开启统计（用于监控命中率等）
         );
         return cacheManager;
     }
